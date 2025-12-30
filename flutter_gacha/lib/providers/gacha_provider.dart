@@ -20,6 +20,7 @@ class GachaProvider extends ChangeNotifier {
   int _charactersInGrade = 22;
   int _plannedPulls = 100;
   bool _noPity = false;
+  bool _gradeResetOnHit = true;  // 등급 당첨 시 천장 리셋
 
   // ========== 프로모드 State ==========
   bool _proMode = false;
@@ -43,6 +44,7 @@ class GachaProvider extends ChangeNotifier {
   int get charactersInGrade => _charactersInGrade;
   int get plannedPulls => _plannedPulls;
   bool get noPity => _noPity;
+  bool get gradeResetOnHit => _gradeResetOnHit;
   bool get proMode => _proMode;
   int get softPityStart => _softPityStart;
   double get softPityIncrease => _softPityIncrease;
@@ -98,6 +100,12 @@ class GachaProvider extends ChangeNotifier {
 
   void setNoPity(bool value) {
     _noPity = value;
+    _saveCurrentMode();
+    notifyListeners();
+  }
+
+  void setGradeResetOnHit(bool value) {
+    _gradeResetOnHit = value;
     _saveCurrentMode();
     notifyListeners();
   }
@@ -196,6 +204,7 @@ class GachaProvider extends ChangeNotifier {
     charactersInGrade: _charactersInGrade,
     plannedPulls: _plannedPulls,
     noPity: _noPity,
+    gradeResetOnHit: _gradeResetOnHit,
   );
 
   ProResult? get proResult => ProCalculator.calculate(
@@ -264,6 +273,7 @@ class GachaProvider extends ChangeNotifier {
         if (!isProMode) {
           _pityType = data['pityType'] ?? 'grade';
           _charactersInGrade = data['charactersInGrade'] ?? 22;
+          _gradeResetOnHit = data['gradeResetOnHit'] ?? true;
         } else {
           _softPityStart = data['softPityStart'] ?? 0;
           _softPityIncrease = (data['softPityIncrease'] ?? 6).toDouble();
@@ -305,6 +315,7 @@ class GachaProvider extends ChangeNotifier {
         'currentPulls': _currentPulls,
         'pityType': _pityType,
         'charactersInGrade': _charactersInGrade,
+        'gradeResetOnHit': _gradeResetOnHit,
         'softPityStart': _softPityStart,
         'softPityIncrease': _softPityIncrease,
         'pickupRate': _pickupRate,

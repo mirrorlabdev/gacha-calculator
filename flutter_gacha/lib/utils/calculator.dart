@@ -12,6 +12,7 @@ class BasicCalculator {
     required int charactersInGrade,
     required int plannedPulls,
     required bool noPity,
+    required bool gradeResetOnHit,
   }) {
     final gradeRate = rate / 100;
     if (gradeRate <= 0 || gradeRate > 1) return const BasicResult();
@@ -125,6 +126,130 @@ class BasicCalculator {
         );
       }
 
+      // ========== 등급 당첨 시 천장 리셋 (DP) ==========
+      if (gradeResetOnHit) {
+        final g = gradeRate;  // 등급 당첨 확률
+        final c = charRate;   // 등급 내 특정 캐릭 확률
+
+        // f[j] = 천장 카운트가 j일 때 아직 원하는 캐릭 못 뽑았을 확률
+        var f = List<double>.filled(pity, 0);
+        f[validCurrentPulls] = 1.0;
+
+        double getSuccessRateByPulls(int n) {
+          if (n <= 0) return 0;
+
+          var state = List<double>.from(f);
+          for (var pull = 0; pull < n; pull++) {
+            final newState = List<double>.filled(pity, 0);
+            for (var j = 0; j < pity; j++) {
+              if (state[j] < 1e-15) continue;
+
+              if (j < pity - 1) {
+                // 일반 뽑기: g×c → 성공, g×(1-c) → 리셋, (1-g) → j+1
+                // 성공은 state에서 빠짐
+                newState[0] += state[j] * g * (1 - c);  // 다른 캐릭 → 리셋
+                newState[j + 1] += state[j] * (1 - g); // 꽝 → 카운트 증가
+              } else {
+                // 천장 (j == pity-1): c → 성공, (1-c) → 리셋
+                // 성공은 state에서 빠짐
+                newState[0] += state[j] * (1 - c);  // 다른 캐릭 → 리셋
+              }
+            }
+            state = newState;
+          }
+
+          final failProb = state.reduce((a, b) => a + b);
+          return 1 - failProb;
+        }
+
+        int findPullsForProb(double targetProb) {
+          if (targetProb <= 0) return 1;
+          if (targetProb >= 1) return pity * 100;
+
+          var state = List<double>.from(f);
+          for (var n = 1; n <= pity * 100; n++) {
+            final newState = List<double>.filled(pity, 0);
+            for (var j = 0; j < pity; j++) {
+              if (state[j] < 1e-15) continue;
+
+              if (j < pity - 1) {
+                newState[0] += state[j] * g * (1 - c);
+                newState[j + 1] += state[j] * (1 - g);
+              } else {
+                newState[0] += state[j] * (1 - c);
+              }
+            }
+            state = newState;
+
+            final failProb = state.reduce((a, b) => a + b);
+            if (1 - failProb >= targetProb) return n;
+          }
+          return pity * 100;
+        }
+
+        // 기대값 계산 (DP로 계산)
+        double calcExpected() {
+          var state = List<double>.from(f);
+          var expected = 0.0;
+          for (var n = 1; n <= pity * 200; n++) {
+            final newState = List<double>.filled(pity, 0);
+            var successThisPull = 0.0;
+
+            for (var j = 0; j < pity; j++) {
+              if (state[j] < 1e-15) continue;
+
+              if (j < pity - 1) {
+                successThisPull += state[j] * g * c;
+                newState[0] += state[j] * g * (1 - c);
+                newState[j + 1] += state[j] * (1 - g);
+              } else {
+                successThisPull += state[j] * c;
+                newState[0] += state[j] * (1 - c);
+              }
+            }
+
+            expected += n * successThisPull;
+            state = newState;
+
+            if (state.reduce((a, b) => a + b) < 1e-12) break;
+          }
+          return expected;
+        }
+
+        final median = findPullsForProb(0.5);
+        final p90 = findPullsForProb(0.9);
+        final p99 = findPullsForProb(0.99);
+        final expectedPulls = calcExpected();
+        final plannedSuccessRate = getSuccessRateByPulls(plannedPulls) * 100;
+
+        final costs = {
+          'median': median * pricePerPull,
+          'p90': p90 * pricePerPull,
+          'p99': p99 * pricePerPull,
+        };
+
+        final chickens = {
+          'median': (costs['median']! / 20000).toStringAsFixed(1),
+          'p90': (costs['p90']! / 20000).toStringAsFixed(1),
+          'p99': (costs['p99']! / 20000).toStringAsFixed(1),
+        };
+
+        return BasicResult(
+          median: median,
+          p90: p90,
+          p99: p99,
+          expected: expectedPulls,
+          costs: costs,
+          chickens: chickens,
+          effectiveRatePercent: specificCharRate * 100,
+          plannedSuccessRate: plannedSuccessRate,
+          remainingPity: remainingPity,
+          completedCycles: completedCycles,
+          hasPity: true,
+        );
+      }
+
+      // ========== 등급 당첨 시 천장 리셋 안 함 (기존) ==========
       final remaining = remainingPity!;
       final failFirstCycle = pow(1 - specificCharRate, remaining - 1) * (1 - charRate);
       final successFirstCycle = 1 - failFirstCycle;

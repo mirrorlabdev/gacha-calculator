@@ -83,6 +83,29 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                       keyboardType: TextInputType.number,
                       theme: theme,
                     ),
+                    // 등급 당첨 시 천장 리셋 체크박스
+                    if (!provider.noPity)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Checkbox(
+                                value: provider.gradeResetOnHit,
+                                onChanged: (v) => provider.setGradeResetOnHit(v ?? true),
+                                activeColor: theme.accent,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '등급 당첨 시 천장 리셋',
+                              style: TextStyle(fontSize: 14, color: theme.text),
+                            ),
+                          ],
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Column(
@@ -92,15 +115,11 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                             '일반 뽑기 특정캐릭 확률: ${result.effectiveRatePercent.toStringAsFixed(4)}%',
                             style: TextStyle(fontSize: 12, color: theme.textDim),
                           ),
-                          if (result.cycleSuccessRate != null)
+                          if (!provider.gradeResetOnHit && result.cycleSuccessRate != null)
                             Text(
                               '천장 1사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
                               style: TextStyle(fontSize: 12, color: theme.success),
                             ),
-                          Text(
-                            '⚠️ 다른 캐릭 당첨 시 천장 리셋은 미반영 (근사치)',
-                            style: TextStyle(fontSize: 12, color: theme.warning),
-                          ),
                         ],
                       ),
                     ),
