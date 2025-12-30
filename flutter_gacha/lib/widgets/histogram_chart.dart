@@ -14,6 +14,9 @@ class HistogramChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (result.histogram.isEmpty) {
+      return const SizedBox.shrink();
+    }
     final maxPercent = result.histogram.map((b) => b.percent).reduce((a, b) => a > b ? a : b);
 
     return Container(

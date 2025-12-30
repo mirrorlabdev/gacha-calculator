@@ -68,6 +68,7 @@ ProbabilityFeeling? findClosestProbability(double targetRate, List<ProbabilityFe
 }
 
 String formatPercent(double value) {
+  if (value >= 100) return '100';
   if (value >= 10) return value.toStringAsFixed(1);
   if (value >= 1) return value.toStringAsFixed(2);
   if (value >= 0.1) return value.toStringAsFixed(3);

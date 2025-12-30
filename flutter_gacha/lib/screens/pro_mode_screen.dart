@@ -879,7 +879,9 @@ class _PickupRateRowState extends State<_PickupRateRow> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (v) {
                       if (v.isEmpty) return;
-                      provider.setPickupRate(double.tryParse(v) ?? 0);
+                      final parsed = double.tryParse(v);
+                      if (parsed == null || parsed <= 0) return;
+                      provider.setPickupRate(parsed);
                     },
                     style: TextStyle(color: theme.neonPurple, fontSize: 14),
                     decoration: InputDecoration(

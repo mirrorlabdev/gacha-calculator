@@ -28,11 +28,13 @@ class BasicCalculator {
 
       double getSuccessRate(int n) {
         if (hasPity && remainingPity != null && n >= remainingPity) return 1;
-        return 1 - pow(1 - effectiveRate, n);
+        return (1 - pow(1 - effectiveRate, n)).toDouble();
       }
 
       int findPullsForProb(double targetProb) {
         if (effectiveRate >= 1) return 1;
+        if (targetProb <= 0) return 1;
+        if (targetProb >= 1) return hasPity && remainingPity != null ? remainingPity : 99999;
         final pullsNeeded = (log(1 - targetProb) / log(1 - effectiveRate)).ceil();
         if (hasPity && remainingPity != null && pullsNeeded > remainingPity) {
           return remainingPity;
@@ -81,10 +83,12 @@ class BasicCalculator {
       final specificCharRate = gradeRate * charRate;
 
       if (!hasPity) {
-        double getSuccessRate(int n) => 1 - pow(1 - specificCharRate, n);
+        double getSuccessRate(int n) => (1 - pow(1 - specificCharRate, n)).toDouble();
 
         int findPullsForProb(double targetProb) {
           if (specificCharRate >= 1) return 1;
+          if (targetProb <= 0) return 1;
+          if (targetProb >= 1) return 99999;
           return (log(1 - targetProb) / log(1 - specificCharRate)).ceil();
         }
 
@@ -132,7 +136,7 @@ class BasicCalculator {
 
         if (n <= remaining) {
           if (n < remaining) {
-            return 1 - pow(1 - specificCharRate, n);
+            return (1 - pow(1 - specificCharRate, n)).toDouble();
           } else {
             return successFirstCycle;
           }
@@ -382,8 +386,10 @@ class ProCalculator {
       }
 
       // ========== 분포 정규화 ==========
+      if (multiCopyDist.isEmpty) return null;
       final sumProb = multiCopyDist.reduce((a, b) => a + b);
-      if (hasPity && sumProb > 0 && (sumProb - 1).abs() > 1e-8) {
+      if (sumProb <= 0) return null;
+      if (hasPity && (sumProb - 1).abs() > 1e-8) {
         for (var i = 0; i < multiCopyDist.length; i++) {
           multiCopyDist[i] /= sumProb;
         }
