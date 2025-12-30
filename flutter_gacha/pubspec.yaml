@@ -1,0 +1,36 @@
+name: gacha_calculator
+description: 가챠 확률 계산기 - React에서 Flutter로 변환된 앱
+
+publish_to: 'none'
+
+version: 1.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  share_plus: ^7.2.1
+  url_launcher: ^6.2.2
+  cupertino_icons: ^1.0.6
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
