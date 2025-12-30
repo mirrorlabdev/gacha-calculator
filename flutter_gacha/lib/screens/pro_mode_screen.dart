@@ -346,210 +346,25 @@ class _ProModeScreenState extends State<ProModeScreen> {
     double width = 80,
     Color? suffixColor,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Row(
-              children: [
-                Text(label, style: TextStyle(color: theme.textDim, fontSize: 13)),
-                if (helpId != null) HelpTooltip(id: helpId, theme: theme),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: width,
-            child: TextField(
-              controller: TextEditingController(
-                text: isInt ? value.toInt().toString() : value.toString(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (v) => onChanged(double.tryParse(v) ?? value),
-              style: TextStyle(color: theme.neonGreen, fontSize: 14),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: theme.bgInput,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(suffix, style: TextStyle(color: suffixColor ?? theme.textDim, fontSize: 12)),
-        ],
-      ),
+    return _ProInputRow(
+      label: label,
+      helpId: helpId,
+      value: value,
+      onChanged: onChanged,
+      suffix: suffix,
+      theme: theme,
+      isInt: isInt,
+      width: width,
+      suffixColor: suffixColor,
     );
   }
 
   Widget _buildSoftPityRow(GachaProvider provider, GachaTheme theme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Row(
-              children: [
-                Text('소프트 천장', style: TextStyle(color: theme.textDim, fontSize: 13)),
-                HelpTooltip(id: 'softPity', theme: theme),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 55,
-            child: TextField(
-              controller: TextEditingController(text: provider.softPityStart.toString()),
-              keyboardType: TextInputType.number,
-              onChanged: (v) => provider.setSoftPityStart(int.tryParse(v) ?? 0),
-              style: TextStyle(
-                color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
-                fontSize: 14,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: theme.bgInput,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-              ),
-            ),
-          ),
-          Text(' 뽑부터 ', style: TextStyle(color: theme.textDim, fontSize: 12)),
-          Text('+', style: TextStyle(color: theme.neonCyan)),
-          SizedBox(
-            width: 45,
-            child: TextField(
-              controller: TextEditingController(text: provider.softPityIncrease.toString()),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (v) => provider.setSoftPityIncrease(double.tryParse(v) ?? 6),
-              style: TextStyle(
-                color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
-                fontSize: 14,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: theme.bgInput,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-              ),
-            ),
-          ),
-          Text(' %씩', style: TextStyle(color: theme.textDim, fontSize: 12)),
-        ],
-      ),
-    );
+    return _SoftPityRow(provider: provider, theme: theme);
   }
 
   Widget _buildPickupRateRow(GachaProvider provider, GachaTheme theme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: Row(
-                  children: [
-                    Text('픽업확률', style: TextStyle(color: theme.textDim, fontSize: 13)),
-                    HelpTooltip(id: 'pickup', theme: theme),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 70,
-                child: TextField(
-                  controller: TextEditingController(text: provider.pickupRate.toString()),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (v) => provider.setPickupRate(double.tryParse(v) ?? 100),
-                  style: TextStyle(color: theme.neonPurple, fontSize: 14),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: theme.bgInput,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide(color: theme.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide(color: theme.border),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text('%', style: TextStyle(color: theme.textDim, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 100),
-            child: Row(
-              children: [
-                _buildQuickButton('확정', 100, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-                const SizedBox(width: 6),
-                _buildQuickButton('50/50', 50, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-                const SizedBox(width: 6),
-                _buildQuickButton('75/25', 75, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 100, top: 4),
-            child: Text(
-              '당첨 시 원하는 캐릭 확률 (등급 내 n명 → ${(100 / provider.pickupRate).toStringAsFixed(1)}명 중 1명)',
-              style: TextStyle(fontSize: 11, color: theme.textDim),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickButton(String label, double value, double current, ValueChanged<double> onTap, GachaTheme theme) {
-    final isSelected = current == value;
-    return GestureDetector(
-      onTap: () => onTap(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: isSelected ? theme.neonPurple.withOpacity(0.2) : Colors.transparent,
-          border: Border.all(color: isSelected ? theme.neonPurple : theme.border),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? theme.neonPurple : theme.textDim,
-            fontSize: 11,
-          ),
-        ),
-      ),
-    );
+    return _PickupRateRow(provider: provider, theme: theme);
   }
 
   Widget _buildGuaranteeRow(GachaProvider provider, GachaTheme theme) {
@@ -568,7 +383,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
           ),
           _buildToggleButton('실패시 확정', true, provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
           const SizedBox(width: 6),
-          _buildToggleButton('매번 독립', false, !provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(!v), theme),
+          _buildToggleButton('매번 독립', false, !provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
           const SizedBox(width: 8),
           Text(
             provider.guaranteeOnFail ? '(원신식)' : '(등급보장식)',
@@ -704,6 +519,464 @@ class _ProModeScreenState extends State<ProModeScreen> {
   }
 
   Widget _buildSuccessRatePanel(GachaProvider provider, result, GachaTheme theme) {
+    return _SuccessRatePanel(provider: provider, result: result, theme: theme);
+  }
+
+  Widget _buildFeelingCard(ProbabilityFeeling feeling, GachaTheme theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.bgCard,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💡 "${feeling.event}" (${feeling.rate}%) 정도의 확률',
+            style: TextStyle(fontSize: 12, color: theme.neonCyan),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            feeling.feeling,
+            style: TextStyle(fontSize: 11, color: theme.textDim),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatNumber(int number) {
+    return number.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+  }
+}
+
+// StatefulWidget for input row with empty value support
+class _ProInputRow extends StatefulWidget {
+  final String label;
+  final String? helpId;
+  final double value;
+  final ValueChanged<double> onChanged;
+  final String suffix;
+  final GachaTheme theme;
+  final bool isInt;
+  final double width;
+  final Color? suffixColor;
+
+  const _ProInputRow({
+    required this.label,
+    this.helpId,
+    required this.value,
+    required this.onChanged,
+    required this.suffix,
+    required this.theme,
+    this.isInt = false,
+    this.width = 80,
+    this.suffixColor,
+  });
+
+  @override
+  State<_ProInputRow> createState() => _ProInputRowState();
+}
+
+class _ProInputRowState extends State<_ProInputRow> {
+  late TextEditingController _controller;
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.isInt ? widget.value.toInt().toString() : widget.value.toString(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_ProInputRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newText = widget.isInt ? widget.value.toInt().toString() : widget.value.toString();
+    if (!_hasFocus && newText != _controller.text) {
+      _controller.text = newText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Row(
+              children: [
+                Text(widget.label, style: TextStyle(color: widget.theme.textDim, fontSize: 13)),
+                if (widget.helpId != null) HelpTooltip(id: widget.helpId!, theme: widget.theme),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: widget.width,
+            child: Focus(
+              onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
+              child: TextField(
+                controller: _controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (v) {
+                  if (v.isEmpty) return;
+                  widget.onChanged(double.tryParse(v) ?? 0);
+                },
+                style: TextStyle(color: widget.theme.neonGreen, fontSize: 14),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: widget.theme.bgInput,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: widget.theme.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: widget.theme.border),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(widget.suffix, style: TextStyle(color: widget.suffixColor ?? widget.theme.textDim, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+// StatefulWidget for soft pity row
+class _SoftPityRow extends StatefulWidget {
+  final GachaProvider provider;
+  final GachaTheme theme;
+
+  const _SoftPityRow({required this.provider, required this.theme});
+
+  @override
+  State<_SoftPityRow> createState() => _SoftPityRowState();
+}
+
+class _SoftPityRowState extends State<_SoftPityRow> {
+  late TextEditingController _startController;
+  late TextEditingController _increaseController;
+  bool _startHasFocus = false;
+  bool _increaseHasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startController = TextEditingController(text: widget.provider.softPityStart.toString());
+    _increaseController = TextEditingController(text: widget.provider.softPityIncrease.toString());
+  }
+
+  @override
+  void didUpdateWidget(_SoftPityRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_startHasFocus && widget.provider.softPityStart.toString() != _startController.text) {
+      _startController.text = widget.provider.softPityStart.toString();
+    }
+    if (!_increaseHasFocus && widget.provider.softPityIncrease.toString() != _increaseController.text) {
+      _increaseController.text = widget.provider.softPityIncrease.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    _increaseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final theme = widget.theme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Row(
+              children: [
+                Text('소프트 천장', style: TextStyle(color: theme.textDim, fontSize: 13)),
+                HelpTooltip(id: 'softPity', theme: theme),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 55,
+            child: Focus(
+              onFocusChange: (hasFocus) => setState(() => _startHasFocus = hasFocus),
+              child: TextField(
+                controller: _startController,
+                keyboardType: TextInputType.number,
+                onChanged: (v) {
+                  if (v.isEmpty) return;
+                  provider.setSoftPityStart(int.tryParse(v) ?? 0);
+                },
+                style: TextStyle(
+                  color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: theme.bgInput,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: theme.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: theme.border),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Text(' 뽑부터 ', style: TextStyle(color: theme.textDim, fontSize: 12)),
+          Text('+', style: TextStyle(color: theme.neonCyan)),
+          SizedBox(
+            width: 45,
+            child: Focus(
+              onFocusChange: (hasFocus) => setState(() => _increaseHasFocus = hasFocus),
+              child: TextField(
+                controller: _increaseController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (v) {
+                  if (v.isEmpty) return;
+                  provider.setSoftPityIncrease(double.tryParse(v) ?? 0);
+                },
+                style: TextStyle(
+                  color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: theme.bgInput,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: theme.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    borderSide: BorderSide(color: theme.border),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Text(' %씩', style: TextStyle(color: theme.textDim, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+// StatefulWidget for pickup rate row
+class _PickupRateRow extends StatefulWidget {
+  final GachaProvider provider;
+  final GachaTheme theme;
+
+  const _PickupRateRow({required this.provider, required this.theme});
+
+  @override
+  State<_PickupRateRow> createState() => _PickupRateRowState();
+}
+
+class _PickupRateRowState extends State<_PickupRateRow> {
+  late TextEditingController _controller;
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.provider.pickupRate.toString());
+  }
+
+  @override
+  void didUpdateWidget(_PickupRateRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_hasFocus && widget.provider.pickupRate.toString() != _controller.text) {
+      _controller.text = widget.provider.pickupRate.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _buildQuickButton(String label, double value, double current, ValueChanged<double> onTap, GachaTheme theme) {
+    final isSelected = current == value;
+    return GestureDetector(
+      onTap: () => onTap(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.neonPurple.withOpacity(0.2) : Colors.transparent,
+          border: Border.all(color: isSelected ? theme.neonPurple : theme.border),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? theme.neonPurple : theme.textDim,
+            fontSize: 11,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final theme = widget.theme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Row(
+                  children: [
+                    Text('픽업확률', style: TextStyle(color: theme.textDim, fontSize: 13)),
+                    HelpTooltip(id: 'pickup', theme: theme),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 70,
+                child: Focus(
+                  onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setPickupRate(double.tryParse(v) ?? 0);
+                    },
+                    style: TextStyle(color: theme.neonPurple, fontSize: 14),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.bgInput,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('%', style: TextStyle(color: theme.textDim, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 100),
+            child: Row(
+              children: [
+                _buildQuickButton('확정', 100, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+                const SizedBox(width: 6),
+                _buildQuickButton('50/50', 50, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+                const SizedBox(width: 6),
+                _buildQuickButton('75/25', 75, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 100, top: 4),
+            child: Text(
+              '당첨 시 원하는 캐릭 확률 (등급 내 n명 → ${(100 / provider.pickupRate).toStringAsFixed(1)}명 중 1명)',
+              style: TextStyle(fontSize: 11, color: theme.textDim),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// StatefulWidget for success rate panel
+class _SuccessRatePanel extends StatefulWidget {
+  final GachaProvider provider;
+  final dynamic result;
+  final GachaTheme theme;
+
+  const _SuccessRatePanel({required this.provider, required this.result, required this.theme});
+
+  @override
+  State<_SuccessRatePanel> createState() => _SuccessRatePanelState();
+}
+
+class _SuccessRatePanelState extends State<_SuccessRatePanel> {
+  late TextEditingController _controller;
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.provider.plannedPulls.toString());
+  }
+
+  @override
+  void didUpdateWidget(_SuccessRatePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_hasFocus && widget.provider.plannedPulls.toString() != _controller.text) {
+      _controller.text = widget.provider.plannedPulls.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatNumber(int number) {
+    return number.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final result = widget.result;
+    final theme = widget.theme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -727,22 +1000,28 @@ class _ProModeScreenState extends State<ProModeScreen> {
               const SizedBox(width: 8),
               SizedBox(
                 width: 80,
-                child: TextField(
-                  controller: TextEditingController(text: provider.plannedPulls.toString()),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setPlannedPulls(int.tryParse(v) ?? 100),
-                  style: TextStyle(color: theme.neonGreen, fontSize: 14),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: theme.bgInput,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide(color: theme.neonGreen),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide(color: theme.neonGreen),
+                child: Focus(
+                  onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setPlannedPulls(int.tryParse(v) ?? 0);
+                    },
+                    style: TextStyle(color: theme.neonGreen, fontSize: 14),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.bgInput,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.neonGreen),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.neonGreen),
+                      ),
                     ),
                   ),
                 ),
@@ -787,38 +1066,6 @@ class _ProModeScreenState extends State<ProModeScreen> {
             ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFeelingCard(ProbabilityFeeling feeling, GachaTheme theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.bgCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '💡 "${feeling.event}" (${feeling.rate}%) 정도의 확률',
-            style: TextStyle(fontSize: 12, color: theme.neonCyan),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            feeling.feeling,
-            style: TextStyle(fontSize: 11, color: theme.textDim),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatNumber(int number) {
-    return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]},',
     );
   }
 }

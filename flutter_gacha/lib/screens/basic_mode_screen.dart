@@ -62,7 +62,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                   GachaInputField(
                     label: provider.pityType == 'pickup' ? '픽업 확률 (%)' : '등급 확률 (%)',
                     value: provider.rate.toString(),
-                    onChanged: (v) => provider.setRate(double.tryParse(v) ?? 1),
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setRate(double.tryParse(v) ?? 0);
+                    },
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     theme: theme,
                   ),
@@ -73,7 +76,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                     GachaInputField(
                       label: '등급 내 캐릭터 수',
                       value: provider.charactersInGrade.toString(),
-                      onChanged: (v) => provider.setCharactersInGrade(int.tryParse(v) ?? 22),
+                      onChanged: (v) {
+                        if (v.isEmpty) return;
+                        provider.setCharactersInGrade(int.tryParse(v) ?? 0);
+                      },
                       keyboardType: TextInputType.number,
                       theme: theme,
                     ),
@@ -113,7 +119,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                   GachaInputField(
                     label: '1뽑 가격 (원)',
                     value: provider.pricePerPull.toString(),
-                    onChanged: (v) => provider.setPricePerPull(int.tryParse(v) ?? 2000),
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setPricePerPull(int.tryParse(v) ?? 0);
+                    },
                     keyboardType: TextInputType.number,
                     theme: theme,
                   ),
@@ -139,7 +148,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                     child: GachaInputField(
                       label: '🎯 내가 뽑을 횟수',
                       value: provider.plannedPulls.toString(),
-                      onChanged: (v) => provider.setPlannedPulls(int.tryParse(v) ?? 100),
+                      onChanged: (v) {
+                        if (v.isEmpty) return;
+                        provider.setPlannedPulls(int.tryParse(v) ?? 0);
+                      },
                       keyboardType: TextInputType.number,
                       theme: theme,
                       noBorder: true,
@@ -337,71 +349,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
   }
 
   Widget _buildPityInput(GachaProvider provider, GachaTheme theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('천장 (회)', style: TextStyle(fontWeight: FontWeight.w600, color: theme.text)),
-            Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Checkbox(
-                    value: provider.noPity,
-                    onChanged: (v) => provider.setNoPity(v ?? false),
-                    activeColor: theme.danger,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '천장 없음',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: provider.noPity ? theme.danger : theme.textDim,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: TextEditingController(text: provider.pity.toString())
-            ..selection = TextSelection.collapsed(offset: provider.pity.toString().length),
-          enabled: !provider.noPity,
-          keyboardType: TextInputType.number,
-          onChanged: (v) => provider.setPity(int.tryParse(v) ?? 100),
-          style: TextStyle(
-            fontSize: 16,
-            color: provider.noPity ? theme.textDim : theme.text,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: provider.noPity ? theme.bgCard : theme.bgInput,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: theme.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: theme.border),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-        ),
-        if (provider.noPity)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '⚠️ 천장 없음 - 순수 확률로만 계산',
-              style: TextStyle(fontSize: 12, color: theme.danger),
-            ),
-          ),
-      ],
-    );
+    return _PityInputField(provider: provider, theme: theme);
   }
 
   Widget _buildCurrentPullsInput(GachaProvider provider, result, GachaTheme theme) {
@@ -411,7 +359,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
         GachaInputField(
           label: '현재 뽑기 수',
           value: provider.currentPulls.toString(),
-          onChanged: (v) => provider.setCurrentPulls(int.tryParse(v) ?? 0),
+          onChanged: (v) {
+            if (v.isEmpty) return;
+            provider.setCurrentPulls(int.tryParse(v) ?? 0);
+          },
           keyboardType: TextInputType.number,
           theme: theme,
           enabled: !provider.noPity,
@@ -447,7 +398,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
         border: Border.all(color: theme.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('결과 (특정 캐릭 1장)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.text)),
           const SizedBox(height: 12),
@@ -606,6 +557,120 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
     return number.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]},',
+    );
+  }
+}
+
+class _PityInputField extends StatefulWidget {
+  final GachaProvider provider;
+  final GachaTheme theme;
+
+  const _PityInputField({required this.provider, required this.theme});
+
+  @override
+  State<_PityInputField> createState() => _PityInputFieldState();
+}
+
+class _PityInputFieldState extends State<_PityInputField> {
+  late TextEditingController _controller;
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.provider.pity.toString());
+  }
+
+  @override
+  void didUpdateWidget(_PityInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_hasFocus && widget.provider.pity.toString() != _controller.text) {
+      _controller.text = widget.provider.pity.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final theme = widget.theme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('천장 (회)', style: TextStyle(fontWeight: FontWeight.w600, color: theme.text)),
+            Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Checkbox(
+                    value: provider.noPity,
+                    onChanged: (v) => provider.setNoPity(v ?? false),
+                    activeColor: theme.danger,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '천장 없음',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: provider.noPity ? theme.danger : theme.textDim,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Focus(
+          onFocusChange: (hasFocus) {
+            setState(() => _hasFocus = hasFocus);
+          },
+          child: TextField(
+            controller: _controller,
+            enabled: !provider.noPity,
+            keyboardType: TextInputType.number,
+            onChanged: (v) {
+              if (v.isEmpty) return;
+              provider.setPity(int.tryParse(v) ?? 0);
+            },
+            style: TextStyle(
+              fontSize: 16,
+              color: provider.noPity ? theme.textDim : theme.text,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: provider.noPity ? theme.bgCard : theme.bgInput,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.border),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ),
+        if (provider.noPity)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '⚠️ 천장 없음 - 순수 확률로만 계산',
+              style: TextStyle(fontSize: 12, color: theme.danger),
+            ),
+          ),
+      ],
     );
   }
 }
