@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/themes.dart';
 
-const String appVersion = 'v1.1.0';
+const String appVersion = 'v0.7.3';
 const String contactFormUrl = 'https://forms.gle/qrRDSS5pUyp42jE97';
 const String privacyPolicyUrl = 'https://gist.github.com/mirrorlabdev/f84328d6cf7a3ec0e70f4c43b050c744';
 
@@ -14,16 +16,44 @@ void showSettingsModal(BuildContext context, GachaTheme theme) {
   );
 }
 
-class SettingsModal extends StatelessWidget {
+class SettingsModal extends StatefulWidget {
   final GachaTheme theme;
 
   const SettingsModal({super.key, required this.theme});
+
+  @override
+  State<SettingsModal> createState() => _SettingsModalState();
+}
+
+class _SettingsModalState extends State<SettingsModal> {
+  bool _copied = false;
+
+  GachaTheme get theme => widget.theme;
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  Future<void> _copyDebugLog() async {
+    final debugInfo = StringBuffer();
+    debugInfo.writeln('=== 가챠 계산기 디버그 로그 ===');
+    debugInfo.writeln('앱 버전: $appVersion');
+    debugInfo.writeln('플랫폼: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
+    debugInfo.writeln('Dart 버전: ${Platform.version}');
+    debugInfo.writeln('시간: ${DateTime.now().toIso8601String()}');
+    debugInfo.writeln('==============================');
+
+    await Clipboard.setData(ClipboardData(text: debugInfo.toString()));
+
+    setState(() => _copied = true);
+
+    // 2초 후 원래 텍스트로 복원
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
   }
 
   void _showLicenseDialog(BuildContext context) {
@@ -77,17 +107,10 @@ class SettingsModal extends StatelessWidget {
 
             // 버그 제보
             _buildMenuItem(
-              icon: '🐛',
-              label: '버그 제보용 로그 복사',
-              onTap: () {
-                // TODO: 클립보드에 디버그 로그 복사
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('디버그 정보가 복사되었습니다'),
-                    backgroundColor: theme.accent,
-                  ),
-                );
-              },
+              icon: _copied ? '✓' : '🐛',
+              label: _copied ? '복사됨' : '버그 제보용 로그 복사',
+              onTap: _copied ? null : _copyDebugLog,
+              highlight: _copied,
             ),
 
             Padding(
@@ -135,8 +158,9 @@ class SettingsModal extends StatelessWidget {
   Widget _buildMenuItem({
     required String icon,
     required String label,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     bool dimmed = false,
+    bool highlight = false,
   }) {
     return InkWell(
       onTap: onTap,
@@ -144,18 +168,26 @@ class SettingsModal extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: theme.border),
+          color: highlight ? theme.success.withAlpha(30) : null,
+          border: Border.all(color: highlight ? theme.success : theme.border),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 16)),
+            Text(
+              icon,
+              style: TextStyle(
+                fontSize: 16,
+                color: highlight ? theme.success : null,
+              ),
+            ),
             const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: dimmed ? theme.textDim : theme.text,
+                color: highlight ? theme.success : (dimmed ? theme.textDim : theme.text),
+                fontWeight: highlight ? FontWeight.w600 : null,
               ),
             ),
           ],

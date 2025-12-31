@@ -59,45 +59,78 @@ class _ProModeScreenState extends State<ProModeScreen> {
                   _buildVariablesPanel(provider, theme),
                   const SizedBox(height: 16),
 
+                  // 계산하기 버튼
+                  OutlinedButton(
+                    onPressed: provider.isCalculating ? null : () => provider.calculate(),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: theme.neonGreen, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      backgroundColor: theme.neonGreen.withOpacity(0.1),
+                    ),
+                    child: provider.isCalculating
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(theme.neonGreen),
+                            ),
+                          )
+                        : Text(
+                            '계산하기',
+                            style: TextStyle(
+                              color: theme.neonGreen,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // 확률분포 히스토그램
-                  if (result != null) ...[
+                  if (provider.hasCalculated && result != null) ...[
                     HistogramChart(result: result, theme: theme),
                     const SizedBox(height: 16),
 
                     // 통계 패널
                     _buildStatisticsPanel(result, provider, theme),
                     const SizedBox(height: 16),
+
+                    // 성공확률 계산
+                    _buildSuccessRatePanel(provider, result, theme),
+                    const SizedBox(height: 16),
+
+                    // 체감 문구
+                    if (feeling != null)
+                      _buildFeelingCard(feeling, theme),
+                    if (feeling != null) const SizedBox(height: 16),
+
+                    // 공유 버튼
+                    OutlinedButton(
+                      onPressed: () => _handleShare(provider),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: theme.neonGreen),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: Text(
+                        '결과 공유하기',
+                        style: TextStyle(
+                          color: theme.neonGreen,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
                   ],
 
-                  // 성공확률 계산
-                  _buildSuccessRatePanel(provider, result, theme),
-                  const SizedBox(height: 16),
-
-                  // 체감 문구
-                  if (feeling != null && result != null)
-                    _buildFeelingCard(feeling, theme),
-                  if (feeling != null) const SizedBox(height: 16),
-
-                  // 공유 버튼
-                  OutlinedButton(
-                    onPressed: () => _handleShare(provider),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: theme.neonGreen),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    child: Text(
-                      '결과 공유하기',
-                      style: TextStyle(
-                        color: theme.neonGreen,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
                   if (_shareStatus.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),

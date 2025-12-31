@@ -1,6 +1,93 @@
 import 'dart:math';
 import '../models/calculation_result.dart';
 
+// ========== compute()용 파라미터 클래스 ==========
+class BasicCalcParams {
+  final double rate;
+  final int pity;
+  final int pricePerPull;
+  final int currentPulls;
+  final String pityType;
+  final int charactersInGrade;
+  final int plannedPulls;
+  final bool noPity;
+  final bool gradeResetOnHit;
+
+  const BasicCalcParams({
+    required this.rate,
+    required this.pity,
+    required this.pricePerPull,
+    required this.currentPulls,
+    required this.pityType,
+    required this.charactersInGrade,
+    required this.plannedPulls,
+    required this.noPity,
+    required this.gradeResetOnHit,
+  });
+}
+
+class ProCalcParams {
+  final double rate;
+  final int pity;
+  final bool noPity;
+  final int softPityStart;
+  final double softPityIncrease;
+  final double pickupRate;
+  final bool guaranteeOnFail;
+  final int targetCopies;
+  final int plannedPulls;
+  final int pricePerPull;
+  final int currentPulls;
+  final bool currentGuarantee;
+
+  const ProCalcParams({
+    required this.rate,
+    required this.pity,
+    required this.noPity,
+    required this.softPityStart,
+    required this.softPityIncrease,
+    required this.pickupRate,
+    required this.guaranteeOnFail,
+    required this.targetCopies,
+    required this.plannedPulls,
+    required this.pricePerPull,
+    required this.currentPulls,
+    required this.currentGuarantee,
+  });
+}
+
+// ========== compute()용 top-level 함수 ==========
+BasicResult computeBasicResult(BasicCalcParams params) {
+  return BasicCalculator.calculate(
+    rate: params.rate,
+    pity: params.pity,
+    pricePerPull: params.pricePerPull,
+    currentPulls: params.currentPulls,
+    pityType: params.pityType,
+    charactersInGrade: params.charactersInGrade,
+    plannedPulls: params.plannedPulls,
+    noPity: params.noPity,
+    gradeResetOnHit: params.gradeResetOnHit,
+  );
+}
+
+ProResult? computeProResult(ProCalcParams params) {
+  return ProCalculator.calculate(
+    rate: params.rate,
+    pity: params.pity,
+    noPity: params.noPity,
+    softPityStart: params.softPityStart,
+    softPityIncrease: params.softPityIncrease,
+    pickupRate: params.pickupRate,
+    guaranteeOnFail: params.guaranteeOnFail,
+    targetCopies: params.targetCopies,
+    plannedPulls: params.plannedPulls,
+    pricePerPull: params.pricePerPull,
+    currentPulls: params.currentPulls,
+    currentGuarantee: params.currentGuarantee,
+  );
+}
+
 // ========== 기본 모드 계산 ==========
 class BasicCalculator {
   static BasicResult calculate({

@@ -106,23 +106,24 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                           ],
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '일반 뽑기 특정캐릭 확률: ${result.effectiveRatePercent.toStringAsFixed(4)}%',
-                            style: TextStyle(fontSize: 12, color: theme.textDim),
-                          ),
-                          if (!provider.gradeResetOnHit && result.cycleSuccessRate != null)
+                    if (result != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              '천장 1사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
-                              style: TextStyle(fontSize: 12, color: theme.success),
+                              '일반 뽑기 특정캐릭 확률: ${result.effectiveRatePercent.toStringAsFixed(4)}%',
+                              style: TextStyle(fontSize: 12, color: theme.textDim),
                             ),
-                        ],
+                            if (!provider.gradeResetOnHit && result.cycleSuccessRate != null)
+                              Text(
+                                '천장 1사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
+                                style: TextStyle(fontSize: 12, color: theme.success),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 16),
                   ],
 
@@ -178,24 +179,54 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 결과 카드
-                  _buildResultCard(provider, result, feeling, theme),
-                  const SizedBox(height: 16),
-
-                  // 공유 버튼
-                  ElevatedButton.icon(
-                    onPressed: () => _handleShare(provider),
+                  // 계산하기 버튼
+                  ElevatedButton(
+                    onPressed: provider.isCalculating ? null : () => provider.calculate(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.success,
+                      backgroundColor: theme.accent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      disabledBackgroundColor: theme.accent.withOpacity(0.5),
                     ),
-                    icon: const Icon(Icons.share),
-                    label: const Text('결과 공유하기', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: provider.isCalculating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '계산하기',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // 결과 카드
+                  if (provider.hasCalculated && result != null) ...[
+                    _buildResultCard(provider, result, feeling, theme),
+                    const SizedBox(height: 16),
+
+                    // 공유 버튼
+                    ElevatedButton.icon(
+                      onPressed: () => _handleShare(provider),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.success,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.share),
+                      label: const Text('결과 공유하기', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
                   if (_shareStatus.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -371,7 +402,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
     return _PityInputField(provider: provider, theme: theme);
   }
 
-  Widget _buildCurrentPullsInput(GachaProvider provider, result, GachaTheme theme) {
+  Widget _buildCurrentPullsInput(GachaProvider provider, dynamic result, GachaTheme theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -386,7 +417,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
           theme: theme,
           enabled: !provider.noPity,
         ),
-        if (!provider.noPity && result.hasPity && provider.currentPulls > 0)
+        if (!provider.noPity && result != null && result.hasPity && provider.currentPulls > 0)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(

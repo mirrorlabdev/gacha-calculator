@@ -34,6 +34,12 @@ class GachaProvider extends ChangeNotifier {
   // ========== UI State ==========
   bool _darkMode = false;
   bool _isLoaded = false;
+  bool _isCalculating = false;
+  bool _hasCalculated = false;
+
+  // ========== Cached Results ==========
+  BasicResult? _basicResultCache;
+  ProResult? _proResultCache;
 
   // ========== Getters ==========
   double get rate => _rate;
@@ -54,6 +60,8 @@ class GachaProvider extends ChangeNotifier {
   bool get currentGuarantee => _currentGuarantee;
   bool get darkMode => _darkMode;
   bool get isLoaded => _isLoaded;
+  bool get isCalculating => _isCalculating;
+  bool get hasCalculated => _hasCalculated;
 
   // ========== Setters ==========
   void setRate(double value) {
@@ -162,6 +170,11 @@ class GachaProvider extends ChangeNotifier {
     // 모드 전환
     _proMode = targetProMode;
 
+    // 캐시 초기화
+    _hasCalculated = false;
+    _basicResultCache = null;
+    _proResultCache = null;
+
     // 새 모드 로드
     await _loadModeData(targetProMode);
 
@@ -190,42 +203,69 @@ class GachaProvider extends ChangeNotifier {
       _charactersInGrade = 22;
     }
 
+    // 캐시 초기화
+    _hasCalculated = false;
+    _basicResultCache = null;
+    _proResultCache = null;
+
     _saveCurrentMode();
     notifyListeners();
   }
 
   // ========== 계산 결과 ==========
-  BasicResult get basicResult => BasicCalculator.calculate(
-    rate: _rate,
-    pity: _pity,
-    pricePerPull: _pricePerPull,
-    currentPulls: _currentPulls,
-    pityType: _pityType,
-    charactersInGrade: _charactersInGrade,
-    plannedPulls: _plannedPulls,
-    noPity: _noPity,
-    gradeResetOnHit: _gradeResetOnHit,
-  );
+  BasicResult? get basicResult => _basicResultCache;
+  ProResult? get proResult => _proResultCache;
 
-  ProResult? get proResult => ProCalculator.calculate(
-    rate: _rate,
-    pity: _pity,
-    noPity: _noPity,
-    softPityStart: _softPityStart,
-    softPityIncrease: _softPityIncrease,
-    pickupRate: _pickupRate,
-    guaranteeOnFail: _guaranteeOnFail,
-    targetCopies: _targetCopies,
-    plannedPulls: _plannedPulls,
-    pricePerPull: _pricePerPull,
-    currentPulls: _currentPulls,
-    currentGuarantee: _currentGuarantee,
-  );
+  // ========== 계산 실행 (별도 isolate에서 실행) ==========
+  Future<void> calculate() async {
+    _isCalculating = true;
+    notifyListeners();
+
+    try {
+      if (_proMode) {
+        final params = ProCalcParams(
+          rate: _rate,
+          pity: _pity,
+          noPity: _noPity,
+          softPityStart: _softPityStart,
+          softPityIncrease: _softPityIncrease,
+          pickupRate: _pickupRate,
+          guaranteeOnFail: _guaranteeOnFail,
+          targetCopies: _targetCopies,
+          plannedPulls: _plannedPulls,
+          pricePerPull: _pricePerPull,
+          currentPulls: _currentPulls,
+          currentGuarantee: _currentGuarantee,
+        );
+        _proResultCache = await compute(computeProResult, params);
+      } else {
+        final params = BasicCalcParams(
+          rate: _rate,
+          pity: _pity,
+          pricePerPull: _pricePerPull,
+          currentPulls: _currentPulls,
+          pityType: _pityType,
+          charactersInGrade: _charactersInGrade,
+          plannedPulls: _plannedPulls,
+          noPity: _noPity,
+          gradeResetOnHit: _gradeResetOnHit,
+        );
+        _basicResultCache = await compute(computeBasicResult, params);
+      }
+      _hasCalculated = true;
+    } catch (e) {
+      debugPrint('Calculation error: $e');
+    }
+
+    _isCalculating = false;
+    notifyListeners();
+  }
 
   ProbabilityFeeling? get feelingData {
+    if (!_hasCalculated) return null;
     final successRate = _proMode && proResult != null
         ? proResult!.plannedSuccessRate
-        : basicResult.plannedSuccessRate;
+        : basicResult?.plannedSuccessRate ?? 0;
     if (successRate <= 0) return null;
     return findClosestProbability(successRate, fallbackProbabilityData);
   }
@@ -330,9 +370,11 @@ class GachaProvider extends ChangeNotifier {
 
   // ========== 공유 텍스트 ==========
   String getShareText() {
+    if (!_hasCalculated) return '먼저 계산하기 버튼을 눌러주세요.';
+
     final successRate = _proMode && proResult != null
         ? proResult!.plannedSuccessRate
-        : basicResult.plannedSuccessRate;
+        : basicResult?.plannedSuccessRate ?? 0;
 
     if (_proMode && proResult != null) {
       final r = proResult!;
@@ -345,8 +387,8 @@ ${_softPityStart > 0 ? '소프트 천장: $_softPityStart뽑부터 +$_softPityIn
 기대값: ${r.mean.toStringAsFixed(1)}뽑 (±${r.stdDev.toStringAsFixed(1)})
 중앙값: ${r.p50}뽑 | 상위10%: ${r.p90}뽑
 $_plannedPulls뽑 성공률: ${formatPercent(successRate)}%''';
-    } else {
-      final r = basicResult;
+    } else if (basicResult != null) {
+      final r = basicResult!;
       return '''🎰 가챠 계산기
 
 $_plannedPulls뽑 했을 때 성공확률: ${formatPercent(successRate)}%
@@ -356,5 +398,6 @@ $_plannedPulls뽑 했을 때 성공확률: ${formatPercent(successRate)}%
 90% 확률: ${r.p90}뽑
 99% 확률: ${r.p99}뽑''';
     }
+    return '결과가 없습니다.';
   }
 }
