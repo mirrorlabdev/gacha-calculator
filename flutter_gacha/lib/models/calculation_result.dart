@@ -1,3 +1,4 @@
+
 // ========== 기본 모드 결과 ==========
 class BasicResult {
   final int median;
