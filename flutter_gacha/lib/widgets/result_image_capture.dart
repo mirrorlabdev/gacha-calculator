@@ -180,7 +180,7 @@ class _ResultCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  '가챠 분석기 PRO',
+                  '가챠 계산기 PRO',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,

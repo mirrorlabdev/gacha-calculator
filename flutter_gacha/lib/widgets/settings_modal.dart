@@ -206,12 +206,14 @@ class _SettingsModalState extends State<SettingsModal> {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: highlight ? theme.success : (dimmed ? theme.textDim : theme.text),
-                fontWeight: highlight ? FontWeight.w600 : null,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: highlight ? theme.success : (dimmed ? theme.textDim : theme.text),
+                  fontWeight: highlight ? FontWeight.w600 : null,
+                ),
               ),
             ),
           ],

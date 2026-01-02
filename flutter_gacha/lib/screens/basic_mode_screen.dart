@@ -131,13 +131,13 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '일반 뽑기 특정캐릭 확률: ${result.effectiveRatePercent.toStringAsFixed(4)}%',
+                            ChunkedText(
+                              chunks: ['일반 뽑기', '특정캐릭', '확률:', '${result.effectiveRatePercent.toStringAsFixed(4)}%'],
                               style: TextStyle(fontSize: 12, color: theme.textDim),
                             ),
                             if (!provider.gradeResetOnHit && result.cycleSuccessRate != null)
-                              Text(
-                                '천장\u00A01사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
+                              ChunkedText(
+                                chunks: ['천장', '1사이클', '(${provider.pity}뽑)당', '성공률:', '${result.cycleSuccessRate!.toStringAsFixed(2)}%'],
                                 style: TextStyle(fontSize: 12, color: theme.success),
                               ),
                           ],
@@ -180,6 +180,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: () => showResetConfirmModal(context, provider, theme),
+                      style: TextButton.styleFrom(alignment: Alignment.center),
                       icon: Icon(Icons.refresh, size: 16, color: theme.textDim),
                       label: Text('초기화', style: TextStyle(fontSize: 12, color: theme.textDim)),
                     ),
@@ -235,6 +236,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        alignment: Alignment.center,
                       ),
                       child: const Text(
                         '계산하기',
@@ -262,6 +264,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              alignment: Alignment.center,
                             ),
                             icon: const Icon(Icons.text_snippet, size: 18),
                             label: const Text('텍스트', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -279,6 +282,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              alignment: Alignment.center,
                             ),
                             icon: const Icon(Icons.image, size: 18),
                             label: const Text('이미지', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -299,10 +303,11 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                   const SizedBox(height: 24),
 
                   // 면책조항
-                  Text(
-                    '본 앱은 참고용 확률 계산 도구이며, 계산 결과의 정확성을 보장하지 않습니다.\n과금 결정에 대한 책임은 사용자 본인에게 있습니다.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: theme.textDim, height: 1.5),
+                  Center(
+                    child: ChunkedText(
+                      chunks: const ['본 앱은', '참고용', '확률 계산', '도구이며,', '계산 결과의', '정확성을', '보장하지', '않습니다.', '과금 결정에', '대한 책임은', '사용자', '본인에게', '있습니다.'],
+                      style: TextStyle(fontSize: 11, color: theme.textDim, height: 1.5),
+                    ),
                   ),
                 ],
               ),
@@ -330,20 +335,26 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text('🎰', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 8),
-              Text(
-                '가챠 계산기',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [Shadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1))],
-                ),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text('🎰', style: TextStyle(fontSize: 20)),
+                  SizedBox(width: 8),
+                  Text(
+                    '가챠 계산기',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1))],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -362,15 +373,20 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                 onTap: () => provider.toggleMode(true),
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.25),
                     border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    '프로모드',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  child: const Align(
+                    alignment: Alignment.center,
+                    widthFactor: 1.0,
+                    heightFactor: 1.0,
+                    child: Text(
+                      '프로모드',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ),
@@ -454,10 +470,10 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          provider.pityType == 'pickup'
-              ? '픽업: 천장 도달 시 해당 캐릭터 확정'
-              : '등급: 천장 도달 시 해당 등급 중 랜덤',
+        ChunkedText(
+          chunks: provider.pityType == 'pickup'
+              ? const ['픽업:', '천장 도달 시', '해당 캐릭터', '확정']
+              : const ['등급:', '천장 도달 시', '해당 등급 중', '랜덤'],
           style: TextStyle(fontSize: 12, color: theme.textDim),
         ),
       ],
@@ -494,18 +510,21 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
         if (!provider.noPity && result != null && result.hasPity && provider.currentPulls > 0)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              result.completedCycles > 0
-                  ? '→ 천장\u00A0${result.completedCycles}바퀴 완료, 다음\u00A0천장까지 ${result.remainingPity}뽑\u00A0남음'
-                  : '→ 첫\u00A0천장까지 ${result.remainingPity}뽑\u00A0남음',
-              style: TextStyle(fontSize: 12, color: theme.success),
-            ),
+            child: result.completedCycles > 0
+                ? ChunkedText(
+                    chunks: ['→', '천장', '${result.completedCycles}바퀴', '완료,', '다음 천장까지', '${result.remainingPity}뽑', '남음'],
+                    style: TextStyle(fontSize: 12, color: theme.success),
+                  )
+                : ChunkedText(
+                    chunks: ['→', '첫 천장까지', '${result.remainingPity}뽑', '남음'],
+                    style: TextStyle(fontSize: 12, color: theme.success),
+                  ),
           ),
         if (provider.noPity)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '(천장 없음 - 현재 뽑기 수 무관)',
+            child: ChunkedText(
+              chunks: const ['(천장 없음', '-', '현재 뽑기 수', '무관)'],
               style: TextStyle(fontSize: 12, color: theme.textDim),
             ),
           ),
@@ -806,8 +825,8 @@ class _PityInputFieldState extends State<_PityInputField> {
         if (provider.noPity)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '⚠️ 천장 없음 - 순수 확률로만 계산',
+            child: ChunkedText(
+              chunks: const ['⚠️', '천장 없음', '-', '순수 확률로만', '계산'],
               style: TextStyle(fontSize: 12, color: theme.danger),
             ),
           ),

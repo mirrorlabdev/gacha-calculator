@@ -42,7 +42,7 @@ class ChunkedText extends StatelessWidget {
       return WidgetSpan(
         alignment: PlaceholderAlignment.baseline,
         baseline: TextBaseline.alphabetic,
-        child: Text(c, style: s),
+        child: Text(c, style: s, textScaler: TextScaler.noScaling),
       );
     }
     // 순수 한글 청크 = TextSpan + WJ/ZWSP

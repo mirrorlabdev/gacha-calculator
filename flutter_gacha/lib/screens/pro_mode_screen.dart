@@ -91,6 +91,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               backgroundColor: theme.neonGreen.withOpacity(0.1),
+                              alignment: Alignment.center,
                             ),
                             child: Text(
                               '계산하기',
@@ -186,10 +187,11 @@ class _ProModeScreenState extends State<ProModeScreen> {
                         const SizedBox(height: 24),
 
                         // 면책조항
-                        Text(
-                          '본 앱은 참고용 확률 계산 도구이며, 계산 결과의 정확성을 보장하지 않습니다.\n과금 결정에 대한 책임은 사용자 본인에게 있습니다.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 10, color: theme.textDim, height: 1.5),
+                        Center(
+                          child: ChunkedText(
+                            chunks: const ['본 앱은', '참고용', '확률 계산', '도구이며,', '계산 결과의', '정확성을', '보장하지', '않습니다.', '과금 결정에', '대한 책임은', '사용자', '본인에게', '있습니다.'],
+                            style: TextStyle(fontSize: 10, color: theme.textDim, height: 1.5),
+                          ),
                         ),
                       ],
                     ),
@@ -228,14 +230,18 @@ class _ProModeScreenState extends State<ProModeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Flexible(
-                child: Text(
-                  '가챠 분석기 PRO',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                    color: Colors.white,
-                    shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: const Text(
+                    '가챠 계산기 PRO',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                    ),
                   ),
                 ),
               ),
@@ -261,19 +267,24 @@ class _ProModeScreenState extends State<ProModeScreen> {
                 onTap: () => provider.toggleMode(false),
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: theme.neonGreen.withOpacity(0.2),
                     border: Border.all(color: theme.neonGreen, width: 2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    '기본모드',
-                    style: TextStyle(
-                      color: theme.neonGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      shadows: [Shadow(color: theme.neonGreen, blurRadius: 8)],
+                  child: Align(
+                    alignment: Alignment.center,
+                    widthFactor: 1.0,
+                    heightFactor: 1.0,
+                    child: Text(
+                      '기본모드',
+                      style: TextStyle(
+                        color: theme.neonGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        shadows: [Shadow(color: theme.neonGreen, blurRadius: 8)],
+                      ),
                     ),
                   ),
                 ),
@@ -447,6 +458,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
           ),
           TextButton(
             onPressed: () => showResetConfirmModal(context, provider, theme),
+            style: TextButton.styleFrom(alignment: Alignment.center),
             child: Text('초기화', style: TextStyle(color: theme.textDim, fontSize: 11)),
           ),
         ],
@@ -517,8 +529,8 @@ class _ProModeScreenState extends State<ProModeScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            provider.guaranteeOnFail ? '(원신식\u00A050/50)' : '(등급보장식)',
+          ChunkedText(
+            chunks: provider.guaranteeOnFail ? const ['(원신식', '50/50)'] : const ['(등급보장식)'],
             style: TextStyle(fontSize: 10, color: theme.textDim),
           ),
         ],
@@ -531,17 +543,22 @@ class _ProModeScreenState extends State<ProModeScreen> {
       onTap: () => onTap(value),
       child: Container(
         constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: isSelected ? theme.neonCyan.withOpacity(0.2) : Colors.transparent,
           border: Border.all(color: isSelected ? theme.neonCyan : theme.border),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? theme.neonCyan : theme.textDim,
-            fontSize: 12,
+        child: Align(
+          alignment: Alignment.center,
+          widthFactor: 1.0,
+          heightFactor: 1.0,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? theme.neonCyan : theme.textDim,
+              fontSize: 12,
+            ),
           ),
         ),
       ),
@@ -571,12 +588,15 @@ class _ProModeScreenState extends State<ProModeScreen> {
         if (!provider.noPity && provider.pity > 0 && provider.currentPulls > 0)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              provider.currentPulls ~/ provider.pity > 0
-                  ? '→ 천장\u00A0${provider.currentPulls ~/ provider.pity}바퀴 완료, 다음\u00A0천장까지 ${provider.pity - (provider.currentPulls % provider.pity)}뽑\u00A0남음'
-                  : '→ 첫\u00A0천장까지 ${provider.pity - provider.currentPulls}뽑\u00A0남음',
-              style: TextStyle(fontSize: 11, color: theme.neonCyan),
-            ),
+            child: provider.currentPulls ~/ provider.pity > 0
+                ? ChunkedText(
+                    chunks: ['→', '천장', '${provider.currentPulls ~/ provider.pity}바퀴', '완료,', '다음 천장까지', '${provider.pity - (provider.currentPulls % provider.pity)}뽑', '남음'],
+                    style: TextStyle(fontSize: 11, color: theme.neonCyan),
+                  )
+                : ChunkedText(
+                    chunks: ['→', '첫 천장까지', '${provider.pity - provider.currentPulls}뽑', '남음'],
+                    style: TextStyle(fontSize: 11, color: theme.neonCyan),
+                  ),
           ),
       ],
     );
@@ -595,17 +615,22 @@ class _ProModeScreenState extends State<ProModeScreen> {
             onTap: () => provider.setCurrentGuarantee(!provider.currentGuarantee),
             child: Container(
               constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: provider.currentGuarantee ? theme.neonCyan.withOpacity(0.2) : Colors.transparent,
                 border: Border.all(color: provider.currentGuarantee ? theme.neonCyan : theme.border),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                provider.currentGuarantee ? '예 (다음 확정)' : '아니오',
-                style: TextStyle(
-                  color: provider.currentGuarantee ? theme.neonCyan : theme.textDim,
-                  fontSize: 12,
+              child: Align(
+                alignment: Alignment.center,
+                widthFactor: 1.0,
+                heightFactor: 1.0,
+                child: Text(
+                  provider.currentGuarantee ? '예 (다음 확정)' : '아니오',
+                  style: TextStyle(
+                    color: provider.currentGuarantee ? theme.neonCyan : theme.textDim,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),
@@ -626,8 +651,8 @@ class _ProModeScreenState extends State<ProModeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '─── 통계 (${provider.targetCopies}장 목표) ───',
+          ChunkedText(
+            chunks: ['───', '통계', '(${provider.targetCopies}장 목표)', '───'],
             style: TextStyle(color: theme.neonCyan, fontSize: 12, letterSpacing: 1),
           ),
           const SizedBox(height: 12),
@@ -654,6 +679,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(color: theme.textDim, fontSize: 13)),
+          const SizedBox(width: 8),
           Text(value, style: TextStyle(color: valueColor, fontSize: 13)),
         ],
       ),
@@ -1074,17 +1100,22 @@ class _PickupRateRowState extends State<_PickupRateRow> {
       onTap: () => onTap(value),
       child: Container(
         constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: isSelected ? theme.neonPurple.withOpacity(0.2) : Colors.transparent,
           border: Border.all(color: isSelected ? theme.neonPurple : theme.border),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? theme.neonPurple : theme.textDim,
-            fontSize: 12,
+        child: Align(
+          alignment: Alignment.center,
+          widthFactor: 1.0,
+          heightFactor: 1.0,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? theme.neonPurple : theme.textDim,
+              fontSize: 12,
+            ),
           ),
         ),
       ),
@@ -1163,8 +1194,8 @@ class _PickupRateRowState extends State<_PickupRateRow> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            '당첨\u00A0시 원하는\u00A0캐릭\u00A0확률 (등급\u00A0내\u00A0n명 → ${(100 / provider.pickupRate).toStringAsFixed(1)}명\u00A0중\u00A01명)',
+          ChunkedText(
+            chunks: ['당첨 시', '원하는 캐릭', '확률', '(등급 내 n명 →', '${(100 / provider.pickupRate).toStringAsFixed(1)}명 중 1명)'],
             style: TextStyle(fontSize: 11, color: theme.textDim),
           ),
         ],
@@ -1304,8 +1335,8 @@ class _SuccessRatePanelState extends State<_SuccessRatePanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${provider.plannedPulls}뽑으로 ${provider.targetCopies}장 얻을 확률',
+                  ChunkedText(
+                    chunks: ['${provider.plannedPulls}뽑으로', '${provider.targetCopies}장', '얻을 확률'],
                     style: TextStyle(fontSize: 12, color: theme.textDim),
                   ),
                   const SizedBox(height: 4),
@@ -1318,8 +1349,8 @@ class _SuccessRatePanelState extends State<_SuccessRatePanel> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '예상비용: ${_formatNumber(provider.plannedPulls * provider.pricePerPull)}원',
+                  ChunkedText(
+                    chunks: ['예상비용:', '${_formatNumber(provider.plannedPulls * provider.pricePerPull)}원'],
                     style: TextStyle(fontSize: 12, color: theme.textDim),
                   ),
                 ],
