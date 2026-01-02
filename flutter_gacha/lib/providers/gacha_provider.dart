@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/calculation_result.dart';
@@ -37,6 +38,16 @@ class GachaProvider extends ChangeNotifier {
   bool _isCalculating = false;
   bool _hasCalculated = false;
 
+  // ========== 계산 진행률 State ==========
+  double _calcProgress = 0.0;  // 0.0 ~ 1.0
+  String? _calcStage;  // 현재 계산 단계 설명
+  Isolate? _calcIsolate;
+  ReceivePort? _calcReceivePort;
+
+  // ========== 폰트 설정 ==========
+  String _proModeFont = 'D2Coding';  // D2Coding, NotoSansMonoKR
+  String _basicModeFont = 'Pretendard';  // IBMPlexSansKR, Pretendard, NotoSansKR
+
   // ========== Cached Results ==========
   BasicResult? _basicResultCache;
   ProResult? _proResultCache;
@@ -62,6 +73,133 @@ class GachaProvider extends ChangeNotifier {
   bool get isLoaded => _isLoaded;
   bool get isCalculating => _isCalculating;
   bool get hasCalculated => _hasCalculated;
+  double get calcProgress => _calcProgress;
+  String? get calcStage => _calcStage;
+  String get proModeFont => _proModeFont;
+  String get basicModeFont => _basicModeFont;
+
+  // ========== 범위 검증 헬퍼 ==========
+  // message는 청크 배열 (한글 줄바꿈 최적화용)
+
+  /// 확률 검증 (0.001 ~ 100)
+  ({bool adjusted, List<String>? message, double value}) validateRate(String input) {
+    final parsed = double.tryParse(input) ?? 0;
+    if (parsed < 0.001) {
+      return (adjusted: true, message: ['확률이', '0.001%로', '조정됐어요', '(최소 0.001%)'], value: 0.001);
+    }
+    if (parsed > 100) {
+      return (adjusted: true, message: ['확률이', '100%로', '조정됐어요', '(최대 100%)'], value: 100.0);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 천장 검증 (1 ~ 2500)
+  ({bool adjusted, List<String>? message, int value}) validatePity(String input) {
+    final parsed = int.tryParse(input) ?? 1;
+    if (parsed < 1) {
+      return (adjusted: true, message: ['천장이', '1회로', '조정됐어요', '(최소 1회)'], value: 1);
+    }
+    if (parsed > 2500) {
+      return (adjusted: true, message: ['천장이', '2500회로', '조정됐어요', '(최대 2500회)'], value: 2500);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 현재 뽑기 수 검증 (0 ~ 2500)
+  ({bool adjusted, List<String>? message, int value}) validateCurrentPulls(String input) {
+    final parsed = int.tryParse(input) ?? 0;
+    if (parsed < 0) {
+      return (adjusted: true, message: ['현재 뽑기가', '0회로', '조정됐어요', '(최소 0회)'], value: 0);
+    }
+    if (parsed > 2500) {
+      return (adjusted: true, message: ['현재 뽑기가', '2500회로', '조정됐어요', '(최대 2500회)'], value: 2500);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 가격 검증 (0 ~ 999999999)
+  ({bool adjusted, List<String>? message, int value}) validatePrice(String input) {
+    final parsed = int.tryParse(input) ?? 0;
+    if (parsed < 0) {
+      return (adjusted: true, message: ['가격이', '0원으로', '조정됐어요', '(최소 0원)'], value: 0);
+    }
+    if (parsed > 999999999) {
+      return (adjusted: true, message: ['가격이', '9억원으로', '조정됐어요', '(최대)'], value: 999999999);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 계획 뽑기 수 검증 (1 ~ 99999)
+  ({bool adjusted, List<String>? message, int value}) validatePlannedPulls(String input) {
+    final parsed = int.tryParse(input) ?? 1;
+    if (parsed < 1) {
+      return (adjusted: true, message: ['계획 뽑기가', '1회로', '조정됐어요', '(최소 1회)'], value: 1);
+    }
+    if (parsed > 99999) {
+      return (adjusted: true, message: ['계획 뽑기가', '99999회로', '조정됐어요', '(최대)'], value: 99999);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 등급 내 캐릭터 수 검증 (1 ~ 1000)
+  ({bool adjusted, List<String>? message, int value}) validateCharactersInGrade(String input) {
+    final parsed = int.tryParse(input) ?? 1;
+    if (parsed < 1) {
+      return (adjusted: true, message: ['캐릭터 수가', '1명으로', '조정됐어요', '(최소 1명)'], value: 1);
+    }
+    if (parsed > 1000) {
+      return (adjusted: true, message: ['캐릭터 수가', '1000명으로', '조정됐어요', '(최대)'], value: 1000);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 소프트 천장 검증 (0 ~ 2500)
+  ({bool adjusted, List<String>? message, int value}) validateSoftPityStart(String input) {
+    final parsed = int.tryParse(input) ?? 0;
+    if (parsed < 0) {
+      return (adjusted: true, message: ['소프트 천장이', '0으로', '조정됐어요', '(최소 0)'], value: 0);
+    }
+    if (parsed > 2500) {
+      return (adjusted: true, message: ['소프트 천장이', '2500으로', '조정됐어요', '(최대)'], value: 2500);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 소프트 천장 증가율 검증 (0 ~ 100)
+  ({bool adjusted, List<String>? message, double value}) validateSoftPityIncrease(String input) {
+    final parsed = double.tryParse(input) ?? 0;
+    if (parsed < 0) {
+      return (adjusted: true, message: ['증가율이', '0%로', '조정됐어요', '(최소 0%)'], value: 0.0);
+    }
+    if (parsed > 100) {
+      return (adjusted: true, message: ['증가율이', '100%로', '조정됐어요', '(최대 100%)'], value: 100.0);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 픽업 확률 검증 (0.1 ~ 100)
+  ({bool adjusted, List<String>? message, double value}) validatePickupRate(String input) {
+    final parsed = double.tryParse(input) ?? 50;
+    if (parsed < 0.1) {
+      return (adjusted: true, message: ['픽업 확률이', '0.1%로', '조정됐어요', '(최소 0.1%)'], value: 0.1);
+    }
+    if (parsed > 100) {
+      return (adjusted: true, message: ['픽업 확률이', '100%로', '조정됐어요', '(최대 100%)'], value: 100.0);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
+
+  /// 목표 장수 검증 (1 ~ 20)
+  ({bool adjusted, List<String>? message, int value}) validateTargetCopies(String input) {
+    final parsed = int.tryParse(input) ?? 1;
+    if (parsed < 1) {
+      return (adjusted: true, message: ['목표 장수가', '1장으로', '조정됐어요', '(최소 1장)'], value: 1);
+    }
+    if (parsed > 20) {
+      return (adjusted: true, message: ['목표 장수가', '20장으로', '조정됐어요', '(최대 20장)'], value: 20);
+    }
+    return (adjusted: false, message: null, value: parsed);
+  }
 
   // ========== Setters ==========
   void setRate(double value) {
@@ -89,9 +227,14 @@ class GachaProvider extends ChangeNotifier {
   }
 
   void setPityType(String value) {
-    _pityType = value;
-    _saveCurrentMode();
-    notifyListeners();
+    if (_pityType != value) {
+      _pityType = value;
+      // 보장 타입 변경 시 결과 초기화
+      _hasCalculated = false;
+      _basicResultCache = null;
+      _saveCurrentMode();
+      notifyListeners();
+    }
   }
 
   void setCharactersInGrade(int value) {
@@ -160,6 +303,18 @@ class GachaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setProModeFont(String value) {
+    _proModeFont = value;
+    _saveCommon();
+    notifyListeners();
+  }
+
+  void setBasicModeFont(String value) {
+    _basicModeFont = value;
+    _saveCommon();
+    notifyListeners();
+  }
+
   // ========== 모드 전환 ==========
   Future<void> toggleMode(bool targetProMode) async {
     if (!_isLoaded) return;
@@ -216,12 +371,33 @@ class GachaProvider extends ChangeNotifier {
   BasicResult? get basicResult => _basicResultCache;
   ProResult? get proResult => _proResultCache;
 
-  // ========== 계산 실행 (별도 isolate에서 실행) ==========
+  // ========== 계산 취소 ==========
+  void cancelCalculation() {
+    if (_calcIsolate != null) {
+      _calcIsolate!.kill(priority: Isolate.immediate);
+      _calcIsolate = null;
+    }
+    _calcReceivePort?.close();
+    _calcReceivePort = null;
+    _isCalculating = false;
+    _calcProgress = 0.0;
+    _calcStage = null;
+    notifyListeners();
+  }
+
+  // ========== 계산 실행 (별도 isolate에서 실행, 진행률 지원) ==========
   Future<void> calculate() async {
+    // 이전 계산 정리
+    cancelCalculation();
+
     _isCalculating = true;
+    _calcProgress = 0.0;
+    _calcStage = '시작 중...';
     notifyListeners();
 
     try {
+      _calcReceivePort = ReceivePort();
+
       if (_proMode) {
         final params = ProCalcParams(
           rate: _rate,
@@ -237,7 +413,28 @@ class GachaProvider extends ChangeNotifier {
           currentPulls: _currentPulls,
           currentGuarantee: _currentGuarantee,
         );
-        _proResultCache = await compute(computeProResult, params);
+
+        final message = IsolateCalcMessage(
+          sendPort: _calcReceivePort!.sendPort,
+          params: params,
+          isProMode: true,
+        );
+
+        _calcIsolate = await Isolate.spawn(calculatorIsolateEntry, message);
+
+        await for (final msg in _calcReceivePort!) {
+          if (msg is ProgressMessage) {
+            _calcProgress = msg.progress;
+            _calcStage = msg.stage;
+            notifyListeners();
+          } else if (msg is ResultMessage<ProResult?>) {
+            _proResultCache = msg.result;
+            if (msg.error != null) {
+              debugPrint('Calculation error: ${msg.error}');
+            }
+            break;
+          }
+        }
       } else {
         final params = BasicCalcParams(
           rate: _rate,
@@ -250,14 +447,39 @@ class GachaProvider extends ChangeNotifier {
           noPity: _noPity,
           gradeResetOnHit: _gradeResetOnHit,
         );
-        _basicResultCache = await compute(computeBasicResult, params);
+
+        final message = IsolateCalcMessage(
+          sendPort: _calcReceivePort!.sendPort,
+          params: params,
+          isProMode: false,
+        );
+
+        _calcIsolate = await Isolate.spawn(calculatorIsolateEntry, message);
+
+        await for (final msg in _calcReceivePort!) {
+          if (msg is ProgressMessage) {
+            _calcProgress = msg.progress;
+            _calcStage = msg.stage;
+            notifyListeners();
+          } else if (msg is ResultMessage<BasicResult>) {
+            _basicResultCache = msg.result;
+            if (msg.error != null) {
+              debugPrint('Calculation error: ${msg.error}');
+            }
+            break;
+          }
+        }
       }
       _hasCalculated = true;
     } catch (e) {
       debugPrint('Calculation error: $e');
     }
 
+    _calcReceivePort?.close();
+    _calcReceivePort = null;
+    _calcIsolate = null;
     _isCalculating = false;
+    _calcProgress = 1.0;
     notifyListeners();
   }
 
@@ -281,6 +503,8 @@ class GachaProvider extends ChangeNotifier {
         final common = jsonDecode(commonStr);
         _darkMode = common['darkMode'] ?? false;
         _proMode = common['proMode'] ?? false;
+        _proModeFont = common['proModeFont'] ?? 'D2Coding';
+        _basicModeFont = common['basicModeFont'] ?? 'Pretendard';
       }
 
       // 현재 모드 데이터 로드
@@ -335,6 +559,8 @@ class GachaProvider extends ChangeNotifier {
       await prefs.setString(_keyCommon, jsonEncode({
         'proMode': _proMode,
         'darkMode': _darkMode,
+        'proModeFont': _proModeFont,
+        'basicModeFont': _basicModeFont,
       }));
     } catch (e) {
       debugPrint('Failed to save common: $e');
@@ -378,25 +604,55 @@ class GachaProvider extends ChangeNotifier {
 
     if (_proMode && proResult != null) {
       final r = proResult!;
+      final formatNum = (int n) => n.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
       return '''🎰 가챠 계산기 PRO
 
-📊 ${_targetCopies}장 목표
-확률: $_rate% | 천장: ${_noPity ? '없음' : '$_pity뽑'}
-${_softPityStart > 0 ? '소프트 천장: $_softPityStart뽑부터 +$_softPityIncrease%\n' : ''}${_pickupRate < 100 ? '픽업확률: $_pickupRate% (${_guaranteeOnFail ? '실패시확정' : '매번독립'})\n' : ''}
-📈 결과
-기대값: ${r.mean.toStringAsFixed(1)}뽑 (±${r.stdDev.toStringAsFixed(1)})
-중앙값: ${r.p50}뽑 | 상위10%: ${r.p90}뽑
-$_plannedPulls뽑 성공률: ${formatPercent(successRate)}%''';
+═══ 변수 설정 ═══
+• 기본확률: $_rate%
+• 천장: ${_noPity ? '없음' : '$_pity뽑'}${_softPityStart > 0 ? '\n• 소프트 천장: $_softPityStart뽑부터 +$_softPityIncrease%' : ''}${_pickupRate < 100 ? '\n• 픽업확률: $_pickupRate% (${_guaranteeOnFail ? '실패시확정' : '매번독립'})' : ''}
+• 뽑기당 가격: ${formatNum(_pricePerPull)}원
+
+═══ ${_targetCopies}장 목표 통계 ═══
+• 기대값: ${r.mean.toStringAsFixed(1)}뽑 (±${r.stdDev.toStringAsFixed(1)})
+• 운 좋으면 (상위10%): ${r.p10}뽑
+• 중앙값 (절반): ${r.p50}뽑
+• 운 나쁘면 (하위10%): ${r.p90}뽑
+• 극악 (하위1%): ${r.p99}뽑
+
+═══ 예상 비용 ═══
+• 중앙값 비용: ${formatNum(r.costs['p50'] ?? 0)}원
+• 운나쁨 비용: ${formatNum(r.costs['p90'] ?? 0)}원
+
+═══ 성공확률 계산 ═══
+• $_plannedPulls뽑 성공률: ${formatPercent(successRate)}%''';
     } else if (basicResult != null) {
       final r = basicResult!;
+      final formatNum = (int n) => n.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+      final pityTypeLabel = _pityType == 'pickup' ? '픽업 보장' : '등급 보장';
+      final gradeInfo = _pityType == 'grade'
+          ? '\n• 등급 내 캐릭터: $_charactersInGrade개\n• 등급 당첨 시 리셋: ${_gradeResetOnHit ? '예' : '아니오'}'
+          : '';
+
       return '''🎰 가챠 계산기
 
-$_plannedPulls뽑 했을 때 성공확률: ${formatPercent(successRate)}%
-예상 비용: ${(_plannedPulls * _pricePerPull).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원
+═══ 변수 설정 ═══
+• 보장 타입: $pityTypeLabel
+• 확률: $_rate%
+• 천장: ${_noPity ? '없음' : '$_pity뽑'}$gradeInfo
+• 뽑기당 가격: ${formatNum(_pricePerPull)}원
 
-50% 확률: ${r.median}뽑
-90% 확률: ${r.p90}뽑
-99% 확률: ${r.p99}뽑''';
+═══ 결과 ═══
+• 50% 확률: ${r.median}뽑 (${formatNum(r.costs['median'] ?? 0)}원)
+• 90% 확률: ${r.p90}뽑 (${formatNum(r.costs['p90'] ?? 0)}원)
+• 99% 확률: ${r.p99}뽑 (${formatNum(r.costs['p99'] ?? 0)}원)
+
+═══ 성공확률 계산 ═══
+• $_plannedPulls뽑 성공률: ${formatPercent(successRate)}%
+• 예상 비용: ${formatNum(_plannedPulls * _pricePerPull)}원''';
     }
     return '결과가 없습니다.';
   }

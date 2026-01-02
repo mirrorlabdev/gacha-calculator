@@ -8,6 +8,9 @@ import '../widgets/settings_modal.dart';
 import '../widgets/reset_confirm_modal.dart';
 import '../widgets/help_tooltip.dart';
 import '../widgets/histogram_chart.dart';
+import '../widgets/result_image_capture.dart';
+import '../widgets/calculation_progress.dart';
+import '../widgets/chunked_text.dart';
 
 class ProModeScreen extends StatefulWidget {
   const ProModeScreen({super.key});
@@ -46,110 +49,153 @@ class _ProModeScreenState extends State<ProModeScreen> {
         return Scaffold(
           backgroundColor: theme.bg,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 헤더
-                  _buildHeader(context, provider, theme),
-                  const SizedBox(height: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 헤더 (고정, glow 효과 포함)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _buildHeader(context, provider, theme),
+                ),
+                const SizedBox(height: 16),
 
-                  // 변수 패널
-                  _buildVariablesPanel(provider, theme),
-                  const SizedBox(height: 16),
+                // 스크롤 영역 (순수 컨텐츠, glow 없음)
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 변수 패널
+                        _buildVariablesPanel(provider, theme),
+                        const SizedBox(height: 16),
 
-                  // 계산하기 버튼
-                  OutlinedButton(
-                    onPressed: provider.isCalculating ? null : () => provider.calculate(),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: theme.neonGreen, width: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      backgroundColor: theme.neonGreen.withOpacity(0.1),
-                    ),
-                    child: provider.isCalculating
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(theme.neonGreen),
-                            ),
+                        // 계산하기 버튼 또는 진행률 바
+                        if (provider.isCalculating)
+                          ProModeProgressBar(
+                            progress: provider.calcProgress,
+                            stage: provider.calcStage,
+                            onCancel: () => provider.cancelCalculation(),
+                            theme: theme,
                           )
-                        : Text(
-                            '계산하기',
-                            style: TextStyle(
-                              color: theme.neonGreen,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
+                        else
+                          OutlinedButton(
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                              provider.calculate();
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: theme.neonGreen, width: 2),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              backgroundColor: theme.neonGreen.withOpacity(0.1),
+                            ),
+                            child: Text(
+                              '계산하기',
+                              style: TextStyle(
+                                color: theme.neonGreen,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
                             ),
                           ),
-                  ),
-                  const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                  // 확률분포 히스토그램
-                  if (provider.hasCalculated && result != null) ...[
-                    HistogramChart(result: result, theme: theme),
-                    const SizedBox(height: 16),
+                        // 확률분포 히스토그램
+                        if (provider.hasCalculated && result != null) ...[
+                          HistogramChart(result: result, theme: theme),
+                          const SizedBox(height: 16),
 
-                    // 통계 패널
-                    _buildStatisticsPanel(result, provider, theme),
-                    const SizedBox(height: 16),
+                          // 통계 패널
+                          _buildStatisticsPanel(result, provider, theme),
+                          const SizedBox(height: 16),
 
-                    // 성공확률 계산
-                    _buildSuccessRatePanel(provider, result, theme),
-                    const SizedBox(height: 16),
+                          // 성공확률 계산
+                          _buildSuccessRatePanel(provider, result, theme),
+                          const SizedBox(height: 16),
 
-                    // 체감 문구
-                    if (feeling != null)
-                      _buildFeelingCard(feeling, theme),
-                    if (feeling != null) const SizedBox(height: 16),
+                          // 체감 문구
+                          if (feeling != null)
+                            _buildFeelingCard(feeling, theme),
+                          if (feeling != null) const SizedBox(height: 16),
 
-                    // 공유 버튼
-                    OutlinedButton(
-                      onPressed: () => _handleShare(provider),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: theme.neonGreen),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                          // 공유 버튼들
+                          Row(
+                            children: [
+                              // 텍스트 공유
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _handleShare(provider),
+                                  icon: Icon(Icons.text_snippet, size: 16, color: theme.neonGreen),
+                                  label: Text(
+                                    '텍스트 공유',
+                                    style: TextStyle(
+                                      color: theme.neonGreen,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: theme.neonGreen),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // 이미지 공유
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => ResultImageCapture.captureAndShare(context, provider, theme),
+                                  icon: Icon(Icons.image, size: 16, color: theme.neonCyan),
+                                  label: Text(
+                                    '이미지 공유',
+                                    style: TextStyle(
+                                      color: theme.neonCyan,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: theme.neonCyan),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        if (_shareStatus.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _shareStatus,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: theme.neonGreen, fontSize: 12),
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+
+                        // 면책조항
+                        Text(
+                          '본 앱은 참고용 확률 계산 도구이며, 계산 결과의 정확성을 보장하지 않습니다.\n과금 결정에 대한 책임은 사용자 본인에게 있습니다.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 10, color: theme.textDim, height: 1.5),
                         ),
-                      ),
-                      child: Text(
-                        '결과 공유하기',
-                        style: TextStyle(
-                          color: theme.neonGreen,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
-
-                  if (_shareStatus.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        _shareStatus,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: theme.neonGreen, fontSize: 12),
-                      ),
-                    ),
-                  const SizedBox(height: 24),
-
-                  // 면책조항
-                  Text(
-                    '본 앱은 참고용 확률 계산 도구이며, 계산 결과의 정확성을 보장하지 않습니다.\n과금 결정에 대한 책임은 사용자 본인에게 있습니다.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: theme.textDim, height: 1.5),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -159,7 +205,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
 
   Widget _buildHeader(BuildContext context, GachaProvider provider, GachaTheme theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: theme.headerGradient,
         borderRadius: BorderRadius.circular(12),
@@ -169,8 +215,10 @@ class _ProModeScreenState extends State<ProModeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Text(
                 '▶',
                 style: TextStyle(
@@ -179,40 +227,45 @@ class _ProModeScreenState extends State<ProModeScreen> {
                   shadows: [Shadow(color: theme.neonGreen, blurRadius: 10)],
                 ),
               ),
-              const SizedBox(width: 10),
-              const Text(
-                '가챠 분석기 PRO',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                  color: Colors.white,
-                  shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+              const SizedBox(width: 8),
+              const Flexible(
+                child: Text(
+                  '가챠 분석기 PRO',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                    color: Colors.white,
+                    shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                  ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               _buildHeaderButton(
                 icon: provider.darkMode ? Icons.light_mode : Icons.dark_mode,
                 onTap: () => provider.setDarkMode(!provider.darkMode),
                 theme: theme,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildHeaderButton(
                 icon: Icons.settings,
                 onTap: () => showSettingsModal(context, theme),
                 theme: theme,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => provider.toggleMode(false),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: theme.neonGreen.withOpacity(0.2),
                     border: Border.all(color: theme.neonGreen, width: 2),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '기본모드',
@@ -236,13 +289,14 @@ class _ProModeScreenState extends State<ProModeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),  // 최소 터치 영역
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.3),
           border: Border.all(color: Colors.white.withOpacity(0.3)),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -271,6 +325,14 @@ class _ProModeScreenState extends State<ProModeScreen> {
             onChanged: (v) => provider.setRate(v),
             suffix: '%',
             theme: theme,
+            onValidate: (v) {
+              final r = provider.validateRate(v);
+              return _ProRangeAdjustResult(
+                wasAdjusted: r.adjusted,
+                message: r.message,
+                correctedValue: r.value,
+              );
+            },
           ),
 
           // 천장
@@ -290,6 +352,14 @@ class _ProModeScreenState extends State<ProModeScreen> {
             suffixColor: provider.noPity ? theme.neonPink : null,
             theme: theme,
             isInt: true,
+            onValidate: provider.noPity ? null : (v) {
+              final r = provider.validatePity(v);
+              return _ProRangeAdjustResult(
+                wasAdjusted: r.adjusted,
+                message: r.message,
+                correctedValue: r.value.toDouble(),
+              );
+            },
           ),
 
           // 소프트 천장
@@ -311,6 +381,14 @@ class _ProModeScreenState extends State<ProModeScreen> {
             theme: theme,
             isInt: true,
             width: 60,
+            onValidate: (v) {
+              final r = provider.validateTargetCopies(v);
+              return _ProRangeAdjustResult(
+                wasAdjusted: r.adjusted,
+                message: r.message,
+                correctedValue: r.value.toDouble(),
+              );
+            },
           ),
 
           // 구분선
@@ -352,6 +430,14 @@ class _ProModeScreenState extends State<ProModeScreen> {
             suffix: '원',
             theme: theme,
             isInt: true,
+            onValidate: (v) {
+              final r = provider.validatePrice(v);
+              return _ProRangeAdjustResult(
+                wasAdjusted: r.adjusted,
+                message: r.message,
+                correctedValue: r.value.toDouble(),
+              );
+            },
           ),
 
           // 초기화
@@ -378,6 +464,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
     bool isInt = false,
     double width = 80,
     Color? suffixColor,
+    _ProRangeAdjustResult Function(String value)? onValidate,
   }) {
     return _ProInputRow(
       label: label,
@@ -389,6 +476,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
       isInt: isInt,
       width: width,
       suffixColor: suffixColor,
+      onValidate: onValidate,
     );
   }
 
@@ -403,23 +491,34 @@ class _ProModeScreenState extends State<ProModeScreen> {
   Widget _buildGuaranteeRow(GachaProvider provider, GachaTheme theme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Row(
-              children: [
-                Text('확정권', style: TextStyle(color: theme.textDim, fontSize: 13)),
-                HelpTooltip(id: 'guarantee', theme: theme),
-              ],
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('확정권', style: TextStyle(color: theme.textDim, fontSize: 13)),
+                  HelpTooltip(id: 'guarantee', theme: theme),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildToggleButton('실패시 확정', true, provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
+                  const SizedBox(width: 6),
+                  _buildToggleButton('매번 독립', false, !provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
+                ],
+              ),
+            ],
           ),
-          _buildToggleButton('실패시 확정', true, provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
-          const SizedBox(width: 6),
-          _buildToggleButton('매번 독립', false, !provider.guaranteeOnFail, (v) => provider.setGuaranteeOnFail(v), theme),
-          const SizedBox(width: 8),
+          const SizedBox(height: 4),
           Text(
-            provider.guaranteeOnFail ? '(원신식)' : '(등급보장식)',
+            provider.guaranteeOnFail ? '(원신식\u00A050/50)' : '(등급보장식)',
             style: TextStyle(fontSize: 10, color: theme.textDim),
           ),
         ],
@@ -431,17 +530,18 @@ class _ProModeScreenState extends State<ProModeScreen> {
     return GestureDetector(
       onTap: () => onTap(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? theme.neonCyan.withOpacity(0.2) : Colors.transparent,
           border: Border.all(color: isSelected ? theme.neonCyan : theme.border),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? theme.neonCyan : theme.textDim,
-            fontSize: 11,
+            fontSize: 12,
           ),
         ),
       ),
@@ -459,14 +559,22 @@ class _ProModeScreenState extends State<ProModeScreen> {
           suffix: '뽑',
           theme: theme,
           isInt: true,
+          onValidate: (v) {
+            final r = provider.validateCurrentPulls(v);
+            return _ProRangeAdjustResult(
+              wasAdjusted: r.adjusted,
+              message: r.message,
+              correctedValue: r.value.toDouble(),
+            );
+          },
         ),
         if (!provider.noPity && provider.pity > 0 && provider.currentPulls > 0)
           Padding(
-            padding: const EdgeInsets.only(left: 100, bottom: 10),
+            padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               provider.currentPulls ~/ provider.pity > 0
-                  ? '→ 천장 ${provider.currentPulls ~/ provider.pity}바퀴 완료, 다음 천장까지 ${provider.pity - (provider.currentPulls % provider.pity)}뽑 남음'
-                  : '→ 첫 천장까지 ${provider.pity - provider.currentPulls}뽑 남음',
+                  ? '→ 천장\u00A0${provider.currentPulls ~/ provider.pity}바퀴 완료, 다음\u00A0천장까지 ${provider.pity - (provider.currentPulls % provider.pity)}뽑\u00A0남음'
+                  : '→ 첫\u00A0천장까지 ${provider.pity - provider.currentPulls}뽑\u00A0남음',
               style: TextStyle(fontSize: 11, color: theme.neonCyan),
             ),
           ),
@@ -477,20 +585,21 @@ class _ProModeScreenState extends State<ProModeScreen> {
   Widget _buildCurrentGuaranteeRow(GachaProvider provider, GachaTheme theme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text('확정권 보유', style: TextStyle(color: theme.textDim, fontSize: 13)),
-          ),
+          Text('확정권 보유', style: TextStyle(color: theme.textDim, fontSize: 13)),
           GestureDetector(
             onTap: () => provider.setCurrentGuarantee(!provider.currentGuarantee),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: provider.currentGuarantee ? theme.neonCyan.withOpacity(0.2) : Colors.transparent,
                 border: Border.all(color: provider.currentGuarantee ? theme.neonCyan : theme.border),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 provider.currentGuarantee ? '예 (다음 확정)' : '아니오',
@@ -526,9 +635,9 @@ class _ProModeScreenState extends State<ProModeScreen> {
           _buildStatRow('기대값', '${result.mean.toStringAsFixed(1)}뽑', theme.neonGreen, theme),
           _buildStatRow('표준편차', '±${result.stdDev.toStringAsFixed(1)}', theme.text, theme),
           Divider(color: theme.border, height: 16),
-          _buildStatRow('운 좋으면 (상위10%)', '${result.p10}뽑', const Color(0xFF4ADE80), theme),
+          _buildStatRow('운\u00A0좋으면 (상위10%)', '${result.p10}뽑', const Color(0xFF4ADE80), theme),
           _buildStatRow('중앙값 (절반)', '${result.p50}뽑', theme.neonCyan, theme),
-          _buildStatRow('운 나쁘면 (하위10%)', '${result.p90}뽑', const Color(0xFFFBBF24), theme),
+          _buildStatRow('운\u00A0나쁘면 (하위10%)', '${result.p90}뽑', const Color(0xFFFBBF24), theme),
           _buildStatRow('극악 (하위1%)', '${result.p99}뽑', theme.neonPink, theme),
           Divider(color: theme.border, height: 16),
           _buildStatRow('중앙값 비용', '${_formatNumber(result.costs['p50']!)}원', theme.text, theme),
@@ -567,7 +676,7 @@ class _ProModeScreenState extends State<ProModeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '💡 "${feeling.event}" (${feeling.rate}%) 정도의 확률',
+            '💡 "${feeling.event}" (${feeling.rate}%) 정도의\u00A0확률',
             style: TextStyle(fontSize: 12, color: theme.neonCyan),
           ),
           const SizedBox(height: 4),
@@ -588,6 +697,19 @@ class _ProModeScreenState extends State<ProModeScreen> {
   }
 }
 
+// 범위 조정 결과 (pro mode용, message는 청크 배열)
+class _ProRangeAdjustResult {
+  final bool wasAdjusted;
+  final List<String>? message;  // 한글 줄바꿈 최적화를 위한 청크 배열
+  final double correctedValue;
+
+  const _ProRangeAdjustResult({
+    required this.wasAdjusted,
+    this.message,
+    required this.correctedValue,
+  });
+}
+
 // StatefulWidget for input row with empty value support
 class _ProInputRow extends StatefulWidget {
   final String label;
@@ -599,6 +721,7 @@ class _ProInputRow extends StatefulWidget {
   final bool isInt;
   final double width;
   final Color? suffixColor;
+  final _ProRangeAdjustResult Function(String value)? onValidate;
 
   const _ProInputRow({
     required this.label,
@@ -610,6 +733,7 @@ class _ProInputRow extends StatefulWidget {
     this.isInt = false,
     this.width = 80,
     this.suffixColor,
+    this.onValidate,
   });
 
   @override
@@ -643,51 +767,81 @@ class _ProInputRowState extends State<_ProInputRow> {
     super.dispose();
   }
 
+  void _handleFocusChange(bool hasFocus) {
+    setState(() => _hasFocus = hasFocus);
+    // 포커스를 잃을 때 범위 검증
+    if (!hasFocus && widget.onValidate != null) {
+      final result = widget.onValidate!(_controller.text);
+      if (result.wasAdjusted) {
+        final newText = widget.isInt
+            ? result.correctedValue.toInt().toString()
+            : result.correctedValue.toString();
+        _controller.text = newText;
+        widget.onChanged(result.correctedValue);
+        if (result.message != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: ChunkedText(chunks: result.message!),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SizedBox(
-            width: 100,
-            child: Row(
-              children: [
-                Text(widget.label, style: TextStyle(color: widget.theme.textDim, fontSize: 13)),
-                if (widget.helpId != null) HelpTooltip(id: widget.helpId!, theme: widget.theme),
-              ],
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.label, style: TextStyle(color: widget.theme.textDim, fontSize: 13)),
+              if (widget.helpId != null) HelpTooltip(id: widget.helpId!, theme: widget.theme),
+            ],
           ),
-          SizedBox(
-            width: widget.width,
-            child: Focus(
-              onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
-              child: TextField(
-                controller: _controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (v) {
-                  if (v.isEmpty) return;
-                  widget.onChanged(double.tryParse(v) ?? 0);
-                },
-                style: TextStyle(color: widget.theme.neonGreen, fontSize: 14),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: widget.theme.bgInput,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: widget.theme.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: widget.theme.border),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: widget.width,
+                child: Focus(
+                  onFocusChange: _handleFocusChange,
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      widget.onChanged(double.tryParse(v) ?? 0);
+                    },
+                    style: TextStyle(color: widget.theme.neonGreen, fontSize: 14),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: widget.theme.bgInput,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: widget.theme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: widget.theme.border),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(widget.suffix, style: TextStyle(color: widget.suffixColor ?? widget.theme.textDim, fontSize: 12)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(widget.suffix, style: TextStyle(color: widget.suffixColor ?? widget.theme.textDim, fontSize: 12)),
         ],
       ),
     );
@@ -736,6 +890,38 @@ class _SoftPityRowState extends State<_SoftPityRow> {
     super.dispose();
   }
 
+  void _handleStartFocusChange(bool hasFocus) {
+    setState(() => _startHasFocus = hasFocus);
+    if (!hasFocus) {
+      final r = widget.provider.validateSoftPityStart(_startController.text);
+      if (r.adjusted) {
+        _startController.text = r.value.toString();
+        widget.provider.setSoftPityStart(r.value);
+        if (r.message != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: ChunkedText(chunks: r.message!), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+          );
+        }
+      }
+    }
+  }
+
+  void _handleIncreaseFocusChange(bool hasFocus) {
+    setState(() => _increaseHasFocus = hasFocus);
+    if (!hasFocus) {
+      final r = widget.provider.validateSoftPityIncrease(_increaseController.text);
+      if (r.adjusted) {
+        _increaseController.text = r.value.toString();
+        widget.provider.setSoftPityIncrease(r.value);
+        if (r.message != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: ChunkedText(chunks: r.message!), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = widget.provider;
@@ -743,82 +929,88 @@ class _SoftPityRowState extends State<_SoftPityRow> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SizedBox(
-            width: 100,
-            child: Row(
-              children: [
-                Text('소프트 천장', style: TextStyle(color: theme.textDim, fontSize: 13)),
-                HelpTooltip(id: 'softPity', theme: theme),
-              ],
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('소프트 천장', style: TextStyle(color: theme.textDim, fontSize: 13)),
+              HelpTooltip(id: 'softPity', theme: theme),
+            ],
           ),
-          SizedBox(
-            width: 55,
-            child: Focus(
-              onFocusChange: (hasFocus) => setState(() => _startHasFocus = hasFocus),
-              child: TextField(
-                controller: _startController,
-                keyboardType: TextInputType.number,
-                onChanged: (v) {
-                  if (v.isEmpty) return;
-                  provider.setSoftPityStart(int.tryParse(v) ?? 0);
-                },
-                style: TextStyle(
-                  color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: theme.bgInput,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: theme.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: theme.border),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 55,
+                child: Focus(
+                  onFocusChange: _handleStartFocusChange,
+                  child: TextField(
+                    controller: _startController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setSoftPityStart(int.tryParse(v) ?? 0);
+                    },
+                    style: TextStyle(
+                      color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.bgInput,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          Text(' 뽑부터 ', style: TextStyle(color: theme.textDim, fontSize: 12)),
-          Text('+', style: TextStyle(color: theme.neonCyan)),
-          SizedBox(
-            width: 45,
-            child: Focus(
-              onFocusChange: (hasFocus) => setState(() => _increaseHasFocus = hasFocus),
-              child: TextField(
-                controller: _increaseController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (v) {
-                  if (v.isEmpty) return;
-                  provider.setSoftPityIncrease(double.tryParse(v) ?? 0);
-                },
-                style: TextStyle(
-                  color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: theme.bgInput,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: theme.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide(color: theme.border),
+              Text(' 뽑부터 ', style: TextStyle(color: theme.textDim, fontSize: 12)),
+              Text('+', style: TextStyle(color: theme.neonCyan)),
+              SizedBox(
+                width: 45,
+                child: Focus(
+                  onFocusChange: _handleIncreaseFocusChange,
+                  child: TextField(
+                    controller: _increaseController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      if (v.isEmpty) return;
+                      provider.setSoftPityIncrease(double.tryParse(v) ?? 0);
+                    },
+                    style: TextStyle(
+                      color: provider.softPityStart > 0 ? theme.neonCyan : theme.textDim,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.bgInput,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide(color: theme.border),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              Text(' %씩', style: TextStyle(color: theme.textDim, fontSize: 12)),
+            ],
           ),
-          Text(' %씩', style: TextStyle(color: theme.textDim, fontSize: 12)),
         ],
       ),
     );
@@ -860,22 +1052,39 @@ class _PickupRateRowState extends State<_PickupRateRow> {
     super.dispose();
   }
 
+  void _handleFocusChange(bool hasFocus) {
+    setState(() => _hasFocus = hasFocus);
+    if (!hasFocus) {
+      final r = widget.provider.validatePickupRate(_controller.text);
+      if (r.adjusted) {
+        _controller.text = r.value.toString();
+        widget.provider.setPickupRate(r.value);
+        if (r.message != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: ChunkedText(chunks: r.message!), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+          );
+        }
+      }
+    }
+  }
+
   Widget _buildQuickButton(String label, double value, double current, ValueChanged<double> onTap, GachaTheme theme) {
     final isSelected = current == value;
     return GestureDetector(
       onTap: () => onTap(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? theme.neonPurple.withOpacity(0.2) : Colors.transparent,
           border: Border.all(color: isSelected ? theme.neonPurple : theme.border),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? theme.neonPurple : theme.textDim,
-            fontSize: 11,
+            fontSize: 12,
           ),
         ),
       ),
@@ -892,70 +1101,71 @@ class _PickupRateRowState extends State<_PickupRateRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              SizedBox(
-                width: 100,
-                child: Row(
-                  children: [
-                    Text('픽업확률', style: TextStyle(color: theme.textDim, fontSize: 13)),
-                    HelpTooltip(id: 'pickup', theme: theme),
-                  ],
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('픽업확률', style: TextStyle(color: theme.textDim, fontSize: 13)),
+                  HelpTooltip(id: 'pickup', theme: theme),
+                ],
               ),
-              SizedBox(
-                width: 70,
-                child: Focus(
-                  onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
-                  child: TextField(
-                    controller: _controller,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (v) {
-                      if (v.isEmpty) return;
-                      final parsed = double.tryParse(v);
-                      if (parsed == null || parsed <= 0) return;
-                      provider.setPickupRate(parsed);
-                    },
-                    style: TextStyle(color: theme.neonPurple, fontSize: 14),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.bgInput,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(4),
-                        borderSide: BorderSide(color: theme.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(4),
-                        borderSide: BorderSide(color: theme.border),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 70,
+                    child: Focus(
+                      onFocusChange: _handleFocusChange,
+                      child: TextField(
+                        controller: _controller,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) {
+                          if (v.isEmpty) return;
+                          final parsed = double.tryParse(v);
+                          if (parsed == null || parsed <= 0) return;
+                          provider.setPickupRate(parsed);
+                        },
+                        style: TextStyle(color: theme.neonPurple, fontSize: 14),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: theme.bgInput,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: theme.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: theme.border),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Text('%', style: TextStyle(color: theme.textDim, fontSize: 12)),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text('%', style: TextStyle(color: theme.textDim, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 100),
-            child: Row(
-              children: [
-                _buildQuickButton('확정', 100, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-                const SizedBox(width: 6),
-                _buildQuickButton('50/50', 50, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-                const SizedBox(width: 6),
-                _buildQuickButton('75/25', 75, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
-              ],
-            ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildQuickButton('확정', 100, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+              _buildQuickButton('50/50', 50, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+              _buildQuickButton('75/25', 75, provider.pickupRate, (v) => provider.setPickupRate(v), theme),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 100, top: 4),
-            child: Text(
-              '당첨 시 원하는 캐릭 확률 (등급 내 n명 → ${(100 / provider.pickupRate).toStringAsFixed(1)}명 중 1명)',
-              style: TextStyle(fontSize: 11, color: theme.textDim),
-            ),
+          const SizedBox(height: 4),
+          Text(
+            '당첨\u00A0시 원하는\u00A0캐릭\u00A0확률 (등급\u00A0내\u00A0n명 → ${(100 / provider.pickupRate).toStringAsFixed(1)}명\u00A0중\u00A01명)',
+            style: TextStyle(fontSize: 11, color: theme.textDim),
           ),
         ],
       ),
@@ -999,6 +1209,22 @@ class _SuccessRatePanelState extends State<_SuccessRatePanel> {
     super.dispose();
   }
 
+  void _handleFocusChange(bool hasFocus) {
+    setState(() => _hasFocus = hasFocus);
+    if (!hasFocus) {
+      final r = widget.provider.validatePlannedPulls(_controller.text);
+      if (r.adjusted) {
+        _controller.text = r.value.toString();
+        widget.provider.setPlannedPulls(r.value);
+        if (r.message != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: ChunkedText(chunks: r.message!), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+          );
+        }
+      }
+    }
+  }
+
   String _formatNumber(int number) {
     return number.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -1018,7 +1244,7 @@ class _SuccessRatePanelState extends State<_SuccessRatePanel> {
         color: theme.bgCard,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.neonGreen),
-        boxShadow: theme.glow,
+        // glow 제거: 스크롤 캡처 호환성을 위해 글로우 효과 제거
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1036,7 +1262,7 @@ class _SuccessRatePanelState extends State<_SuccessRatePanel> {
               SizedBox(
                 width: 80,
                 child: Focus(
-                  onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
+                  onFocusChange: _handleFocusChange,
                   child: TextField(
                     controller: _controller,
                     keyboardType: TextInputType.number,

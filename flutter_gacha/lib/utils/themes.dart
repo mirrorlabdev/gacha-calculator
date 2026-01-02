@@ -7,7 +7,7 @@ class ProThemeDark {
   static const Color bgInput = Color(0xFF1A1A1A);
   static const Color border = Color(0xFF2A2A2A);
   static const Color text = Color(0xFFE0E0E0);
-  static const Color textDim = Color(0xFF666666);
+  static const Color textDim = Color(0xFF999999);  // 대비 4.5:1 이상
   static const Color neonGreen = Color(0xFF00FF88);
   static const Color neonCyan = Color(0xFF00F0FF);
   static const Color neonPurple = Color(0xFFBF5FFF);
@@ -37,7 +37,7 @@ class ProThemeLight {
   static const Color bgInput = Color(0xFFF0F0F2);
   static const Color border = Color(0xFFE0E0E5);
   static const Color text = Color(0xFF1A1A1A);
-  static const Color textDim = Color(0xFF666666);
+  static const Color textDim = Color(0xFF555555);  // 대비 7:1 이상
   static const Color neonGreen = Color(0xFF00CC6A);
   static const Color neonCyan = Color(0xFF00B8D4);
   static const Color neonPurple = Color(0xFF9C4DFF);
@@ -63,7 +63,7 @@ class BasicThemeDark {
   static const Color bgInput = Color(0xFF252525);
   static const Color border = Color(0xFF404040);
   static const Color text = Color(0xFFE0E0E0);
-  static const Color textDim = Color(0xFF888888);
+  static const Color textDim = Color(0xFF9A9A9A);  // 대비 5.5:1 이상
   static const Color accent = Color(0xFF60A5FA);
   static const Color accentLight = Color(0xFF1E3A5F);
   static const Color success = Color(0xFF4ADE80);
@@ -84,7 +84,7 @@ class BasicThemeLight {
   static const Color bgInput = Color(0xFFFFFFFF);
   static const Color border = Color(0xFFD6D3D1);
   static const Color text = Color(0xFF292524);
-  static const Color textDim = Color(0xFF78716C);
+  static const Color textDim = Color(0xFF57534E);  // 대비 7:1 이상
   static const Color accent = Color(0xFF6366F1);
   static const Color accentLight = Color(0xFFE0E7FF);
   static const Color success = Color(0xFF22C55E);

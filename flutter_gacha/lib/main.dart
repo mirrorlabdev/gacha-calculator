@@ -17,8 +17,27 @@ void main() {
   runApp(const GachaCalculatorApp());
 }
 
-class GachaCalculatorApp extends StatelessWidget {
+class GachaCalculatorApp extends StatefulWidget {
   const GachaCalculatorApp({super.key});
+
+  @override
+  State<GachaCalculatorApp> createState() => _GachaCalculatorAppState();
+}
+
+class _GachaCalculatorAppState extends State<GachaCalculatorApp> {
+  bool _fontsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 첫 프레임 이후 폰트 로딩 완료로 표시
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 다음 프레임까지 대기 (폰트 렌더링 완료 보장)
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted) setState(() => _fontsLoaded = true);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +51,23 @@ class GachaCalculatorApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               brightness: provider.darkMode ? Brightness.dark : Brightness.light,
-              fontFamily: provider.proMode ? 'JetBrainsMono' : null,
             ),
-            home: const HomeScreen(),
+            home: Stack(
+              children: [
+                const HomeScreen(),
+                // 폰트 프리로딩: 투명하게 두 폰트 모두 렌더링하여 캐싱
+                if (!_fontsLoaded)
+                  const Positioned(
+                    left: -1000,
+                    child: Column(
+                      children: [
+                        Text('가챠 계산기 PRO 0123456789', style: TextStyle(fontFamily: 'D2Coding')),
+                        Text('가챠 계산기 PRO 0123456789', style: TextStyle(fontFamily: 'Pretendard')),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),

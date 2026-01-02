@@ -1,5 +1,19 @@
 import 'package:flutter/material.dart';
 import '../utils/themes.dart';
+import 'chunked_text.dart';
+
+// 범위 조정 결과 (message는 청크 배열)
+class RangeAdjustResult {
+  final bool wasAdjusted;
+  final List<String>? message;  // 한글 줄바꿈 최적화를 위한 청크 배열
+  final String correctedValue;
+
+  const RangeAdjustResult({
+    required this.wasAdjusted,
+    this.message,
+    required this.correctedValue,
+  });
+}
 
 class GachaInputField extends StatefulWidget {
   final String label;
@@ -9,6 +23,7 @@ class GachaInputField extends StatefulWidget {
   final GachaTheme theme;
   final bool enabled;
   final bool noBorder;
+  final RangeAdjustResult Function(String value)? onValidate;  // 범위 검증 콜백
 
   const GachaInputField({
     super.key,
@@ -19,6 +34,7 @@ class GachaInputField extends StatefulWidget {
     required this.theme,
     this.enabled = true,
     this.noBorder = false,
+    this.onValidate,
   });
 
   @override
@@ -67,6 +83,23 @@ class _GachaInputFieldState extends State<GachaInputField> {
         Focus(
           onFocusChange: (hasFocus) {
             setState(() => _hasFocus = hasFocus);
+            // 포커스를 잃을 때 범위 검증
+            if (!hasFocus && widget.onValidate != null) {
+              final result = widget.onValidate!(_controller.text);
+              if (result.wasAdjusted) {
+                _controller.text = result.correctedValue;
+                widget.onChanged(result.correctedValue);
+                if (result.message != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: ChunkedText(chunks: result.message!),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            }
           },
           child: TextField(
             controller: _controller,

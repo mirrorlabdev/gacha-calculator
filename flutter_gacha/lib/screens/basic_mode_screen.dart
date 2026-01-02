@@ -7,6 +7,9 @@ import '../utils/probability_data.dart';
 import '../widgets/settings_modal.dart';
 import '../widgets/reset_confirm_modal.dart';
 import '../widgets/input_field.dart';
+import '../widgets/result_image_capture.dart';
+import '../widgets/calculation_progress.dart';
+import '../widgets/chunked_text.dart';
 
 class BasicModeScreen extends StatefulWidget {
   const BasicModeScreen({super.key});
@@ -66,6 +69,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                       if (v.isEmpty) return;
                       provider.setRate(double.tryParse(v) ?? 0);
                     },
+                    onValidate: (v) {
+                      final r = provider.validateRate(v);
+                      return RangeAdjustResult(
+                        wasAdjusted: r.adjusted,
+                        message: r.message,
+                        correctedValue: r.value.toString(),
+                      );
+                    },
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     theme: theme,
                   ),
@@ -79,6 +90,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                       onChanged: (v) {
                         if (v.isEmpty) return;
                         provider.setCharactersInGrade(int.tryParse(v) ?? 0);
+                      },
+                      onValidate: (v) {
+                        final r = provider.validateCharactersInGrade(v);
+                        return RangeAdjustResult(
+                          wasAdjusted: r.adjusted,
+                          message: r.message,
+                          correctedValue: r.value.toString(),
+                        );
                       },
                       keyboardType: TextInputType.number,
                       theme: theme,
@@ -118,7 +137,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                             ),
                             if (!provider.gradeResetOnHit && result.cycleSuccessRate != null)
                               Text(
-                                '천장 1사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
+                                '천장\u00A01사이클(${provider.pity}뽑)당 성공률: ${result.cycleSuccessRate!.toStringAsFixed(2)}%',
                                 style: TextStyle(fontSize: 12, color: theme.success),
                               ),
                           ],
@@ -142,6 +161,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                     onChanged: (v) {
                       if (v.isEmpty) return;
                       provider.setPricePerPull(int.tryParse(v) ?? 0);
+                    },
+                    onValidate: (v) {
+                      final r = provider.validatePrice(v);
+                      return RangeAdjustResult(
+                        wasAdjusted: r.adjusted,
+                        message: r.message,
+                        correctedValue: r.value.toString(),
+                      );
                     },
                     keyboardType: TextInputType.number,
                     theme: theme,
@@ -172,6 +199,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                         if (v.isEmpty) return;
                         provider.setPlannedPulls(int.tryParse(v) ?? 0);
                       },
+                      onValidate: (v) {
+                        final r = provider.validatePlannedPulls(v);
+                        return RangeAdjustResult(
+                          wasAdjusted: r.adjusted,
+                          message: r.message,
+                          correctedValue: r.value.toString(),
+                        );
+                      },
                       keyboardType: TextInputType.number,
                       theme: theme,
                       noBorder: true,
@@ -179,32 +214,33 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 계산하기 버튼
-                  ElevatedButton(
-                    onPressed: provider.isCalculating ? null : () => provider.calculate(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  // 계산하기 버튼 또는 진행률 바
+                  if (provider.isCalculating)
+                    BasicModeProgressBar(
+                      progress: provider.calcProgress,
+                      stage: provider.calcStage,
+                      onCancel: () => provider.cancelCalculation(),
+                      theme: theme,
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                        provider.calculate();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      disabledBackgroundColor: theme.accent.withOpacity(0.5),
+                      child: const Text(
+                        '계산하기',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    child: provider.isCalculating
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            '계산하기',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
                   const SizedBox(height: 16),
 
                   // 결과 카드
@@ -212,19 +248,43 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                     _buildResultCard(provider, result, feeling, theme),
                     const SizedBox(height: 16),
 
-                    // 공유 버튼
-                    ElevatedButton.icon(
-                      onPressed: () => _handleShare(provider),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    // 공유 버튼들
+                    Row(
+                      children: [
+                        // 텍스트 공유
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _handleShare(provider),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            icon: const Icon(Icons.text_snippet, size: 18),
+                            label: const Text('텍스트', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ),
                         ),
-                      ),
-                      icon: const Icon(Icons.share),
-                      label: const Text('결과 공유하기', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 8),
+                        // 이미지 공유
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => BasicResultImageCapture.captureAndShare(context, provider, theme),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.accent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            icon: const Icon(Icons.image, size: 18),
+                            label: const Text('이미지', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                   if (_shareStatus.isNotEmpty)
@@ -255,7 +315,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
 
   Widget _buildHeader(BuildContext context, GachaProvider provider, GachaTheme theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: theme.headerGradient,
         borderRadius: BorderRadius.circular(12),
@@ -270,10 +330,11 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
               Text('🎰', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Text(
                 '가챠 계산기',
                 style: TextStyle(
@@ -285,24 +346,26 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
             ],
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               _buildHeaderButton(
                 icon: provider.darkMode ? Icons.light_mode : Icons.dark_mode,
                 onTap: () => provider.setDarkMode(!provider.darkMode),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildHeaderButton(
                 icon: Icons.settings,
                 onTap: () => showSettingsModal(context, theme),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => provider.toggleMode(true),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  constraints: const BoxConstraints(minHeight: 44),  // 최소 터치 영역
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.25),
-                    border: Border.all(color: Colors.white.withOpacity(0.5)),
+                    border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
@@ -322,13 +385,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),  // 최소 터치 영역
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.2),
           border: Border.all(color: Colors.white.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -348,7 +412,8 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                 child: GestureDetector(
                   onTap: () => provider.setPityType('pickup'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    constraints: const BoxConstraints(minHeight: 48),  // 최소 터치 영역
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: provider.pityType == 'pickup' ? theme.accent : theme.bgCard,
                       borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
@@ -368,7 +433,8 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                 child: GestureDetector(
                   onTap: () => provider.setPityType('grade'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    constraints: const BoxConstraints(minHeight: 48),  // 최소 터치 영역
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: provider.pityType == 'grade' ? theme.accent : theme.bgCard,
                       borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
@@ -413,6 +479,14 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
             if (v.isEmpty) return;
             provider.setCurrentPulls(int.tryParse(v) ?? 0);
           },
+          onValidate: (v) {
+            final r = provider.validateCurrentPulls(v);
+            return RangeAdjustResult(
+              wasAdjusted: r.adjusted,
+              message: r.message,
+              correctedValue: r.value.toString(),
+            );
+          },
           keyboardType: TextInputType.number,
           theme: theme,
           enabled: !provider.noPity,
@@ -422,8 +496,8 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               result.completedCycles > 0
-                  ? '→ 천장 ${result.completedCycles}바퀴 완료, 다음 천장까지 ${result.remainingPity}뽑 남음'
-                  : '→ 첫 천장까지 ${result.remainingPity}뽑 남음',
+                  ? '→ 천장\u00A0${result.completedCycles}바퀴 완료, 다음\u00A0천장까지 ${result.remainingPity}뽑\u00A0남음'
+                  : '→ 첫\u00A0천장까지 ${result.remainingPity}뽑\u00A0남음',
               style: TextStyle(fontSize: 12, color: theme.success),
             ),
           ),
@@ -474,7 +548,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '비용: ${_formatNumber(provider.plannedPulls * provider.pricePerPull)}원 / 🍗 ${((provider.plannedPulls * provider.pricePerPull) / 20000).toStringAsFixed(1)}마리',
+                  '비용: ${_formatNumber(provider.plannedPulls * provider.pricePerPull)}원 /\u00A0🍗\u00A0${((provider.plannedPulls * provider.pricePerPull) / 20000).toStringAsFixed(1)}마리',
                   style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
                 ),
               ],
@@ -595,7 +669,7 @@ class _BasicModeScreenState extends State<BasicModeScreen> {
             style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
           ),
           Text(
-            '${_formatNumber(cost)}원 / 🍗 $chickens마리',
+            '${_formatNumber(cost)}원 /\u00A0🍗\u00A0${chickens}마리',
             style: TextStyle(color: subColor),
           ),
         ],
@@ -684,6 +758,23 @@ class _PityInputFieldState extends State<_PityInputField> {
         Focus(
           onFocusChange: (hasFocus) {
             setState(() => _hasFocus = hasFocus);
+            // 포커스를 잃을 때 범위 검증
+            if (!hasFocus) {
+              final r = provider.validatePity(_controller.text);
+              if (r.adjusted) {
+                _controller.text = r.value.toString();
+                provider.setPity(r.value);
+                if (r.message != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: ChunkedText(chunks: r.message!),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            }
           },
           child: TextField(
             controller: _controller,

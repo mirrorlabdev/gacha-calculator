@@ -2,14 +2,14 @@
 
 ## 🚨 세션 시작 시 확인사항
 
-### Git 상태 (2025-01-01 기준)
-- **푸시 안 된 커밋 4개 있음** → `git push` 필요
+### Git 상태 (2025-01-02 기준)
 - 브랜치: `main`
+- 변경사항 커밋/푸시 필요 확인할 것
 
 ### Google Play 상태
-- **업로드 완료** (2025-01-01)
+- **0.7.3 업로드 완료** (2025-01-01)
 - **검토 대기 중** → 검토 끝나면 20인 테스트 시작 가능
-- 앱 버전: `0.7.3`
+- 개발 중 버전: `0.7.4`
 
 ### 키스토어 정보 (⚠️ 중요 - 잃어버리면 앱 업데이트 불가!)
 - 파일: `android/release-keystore.jks`
@@ -108,6 +108,9 @@
 - [x] 핵심 계산 기능 전부
 - [x] 등급보장 천장 리셋 옵션 (DP)
 - [x] Google Play 업로드 (2025-01-01) ✅
+- [x] 앱 아이콘 추가 ✅
+- [x] 결과 공유 기능 개선 (텍스트 + 이미지) ✅
+- [x] 업데이트 공지 기능 ✅
 - [ ] 14일 테스트 시작 - 검토 대기 중
 - [ ] 버그 QA (심각한 크래시만)
 
@@ -142,19 +145,92 @@
 - 주석 한국어
 - **담당자는 기획자** - 기술 용어 쉽게 풀어서 설명할 것
 
+### 한글 줄바꿈 최적화 (하이브리드 방식)
+
+**배경:**
+- Flutter는 UAX #14 (Unicode Line Breaking Algorithm) 사용
+- 한글 음절 = Line Break Class H2/H3 → **모든 음절 사이에서 줄바꿈 허용**
+- ZWS, NBSP, Word Joiner 등 유니코드 제어 문자 = **한글에서 무의미**
+
+**해결책: 하이브리드 방식 (WidgetSpan + TextSpan)**
+
+| 청크 타입 | 처리 방식 | 효과 |
+|----------|----------|------|
+| 숫자 포함 | `WidgetSpan` | 절대 안 쪼개짐 |
+| 순수 한글 | `TextSpan` + WJ/ZWSP | 5글자마다 줄바꿈 허용 |
+
+**핵심 로직 (`lib/widgets/chunked_text.dart`):**
+```dart
+bool _isNumericHeavy(String s) {
+  return RegExp(r'\d').hasMatch(s);  // 숫자 있으면 true
+}
+
+InlineSpan _spanForChunk(String c, TextStyle s) {
+  if (_isNumericHeavy(c)) {
+    // 숫자 포함 = WidgetSpan = 원자화
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: Text(c, style: s),
+    );
+  }
+  // 순수 한글 = TextSpan + WJ/ZWSP
+  return TextSpan(text: _lockChunk(c), style: s);
+}
+```
+
+**청크 분리 원칙:**
+- 청크 = 읽었을 때 자연스러운 **최소 의미 덩어리**
+- 권장 최대 길이: **6자** (고유명사/전문용어 예외)
+- 조사 단독 분리 금지 (`'에'`, `'을'` 단독 ❌)
+
+**예시:**
+```dart
+// 원본
+'목표 장수가 20장으로 조정됐어요 (최대 20장)'
+
+// 청크 배열
+['목표 장수가', '20장으로', '조정됐어요', '(최대 20장)']
+// → '20장으로', '(최대 20장)'은 WidgetSpan으로 원자화
+```
+
+**사용법:**
+```dart
+ChunkedText(
+  chunks: ['확률이', '100%로', '조정됐어요', '(최대 100%)'],
+  style: TextStyle(fontSize: 14),
+)
+```
+
+**적용 대상:**
+- 스낵바 메시지 (gacha_provider.dart)
+- 도움말 (help_tooltip.dart)
+- 동적 텍스트 (basic_mode_screen.dart, pro_mode_screen.dart)
+
 ## 파일 구조
 ```
 lib/
 ├── main.dart
 ├── screens/
+│   ├── home_screen.dart
 │   ├── basic_mode_screen.dart
 │   └── pro_mode_screen.dart
 ├── widgets/
 │   ├── input_field.dart
-│   └── histogram_chart.dart
+│   ├── histogram_chart.dart
+│   ├── settings_modal.dart
+│   ├── reset_confirm_modal.dart
+│   ├── help_tooltip.dart
+│   ├── update_popup.dart          # 업데이트 공지
+│   ├── result_image_capture.dart  # 이미지 공유
+│   └── chunked_text.dart          # 한글 줄바꿈 최적화
 ├── utils/
 │   ├── calculator.dart
-│   └── probability_data.dart
+│   ├── probability_data.dart
+│   ├── themes.dart
+│   └── changelog.dart             # 버전별 변경사항
+├── models/
+│   └── calculation_result.dart
 └── providers/
     └── gacha_provider.dart
 ```
@@ -202,10 +278,24 @@ lib/
   - 버튼 스타일
 
 ### 알려진 이슈 (당장 안 고쳐도 됨)
-- [ ] **프로 모드 스크롤 캡처 안 됨**
-  - 원인 추정: 그라데이션 헤더 + 네온 glow 효과 + 히스토그램
-  - 기본 모드는 잘 됨
-  - 우선순위 낮음 (사용자 기능에 영향 없음)
+- [ ] **프로 모드 스크롤 캡처 안 됨** (Flutter + Android 호환성 문제)
+  - 헤더 고정 + glow 제거 시도했으나 여전히 안 됨
+  - **대안: 이미지 공유 기능으로 대체** ✅
 - [ ] **withOpacity 경고 34개**
   - deprecated 경고, 작동에는 문제 없음
   - `.withValues()`로 마이그레이션 필요
+
+## 0.7.4 변경사항 (2025-01-02)
+
+### 새 기능
+- **앱 아이콘** 추가
+- **이미지 공유** 기능 (기본모드 + 프로모드)
+- **공유 텍스트 개선** - 변수 설정 전체 포함
+- **업데이트 공지** 기능 - 앱 시작 시 팝업 + 설정에서 전체 내역 확인
+
+### 버그 수정
+- 보장 타입(픽업/등급) 전환 시 이전 결과 남아있던 문제 수정
+
+### 기술 변경
+- 프로모드 렌더링 레이어 분리 (헤더 고정, 스크롤 영역 분리)
+- 프로모드 성공확률 패널 glow 제거
